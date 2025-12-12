@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { supabase } from '@/lib/supabase'
-import { Gift, UserX } from 'lucide-react'
+import { Gift, UserX, LogOut, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const GUEST_STORAGE_KEY = 'rewards_tracker_guest_mode'
@@ -31,21 +31,17 @@ export default function AuthComponent() {
     setRedirectTo(`${window.location.origin}/auth/callback`)
   }, [])
 
-  // Removed auto-redirect to prevent infinite loop.
-  // The user will manually navigate or the middleware will handle it once fixed.
-  useEffect(() => {
-    if (user) {
-      console.log('Auth Component: User detected (Client Side)')
-      // router.push('/') // Disabled temporarily to debug loop
-    }
-  }, [user, router])
-
   const handleGuestMode = () => {
     console.log('Auth Component: Entering as guest')
     localStorage.setItem(GUEST_STORAGE_KEY, 'true')
     localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(defaultGuestData))
     document.cookie = 'rewards_guest_mode=true; path=/; max-age=31536000'
     router.push('/')
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.reload()
   }
 
   return (
@@ -61,13 +57,21 @@ export default function AuthComponent() {
 
         <div className="xbox-card p-6">
           {user ? (
-            <div className="text-center">
-              <p className="text-white mb-4">Você já está logado como {user.email}</p>
+            <div className="text-center space-y-3">
+              <p className="text-white">Você já está logado como <br /><span className="font-semibold text-[var(--xbox-green)]">{user.email}</span></p>
               <button
                 onClick={() => window.location.href = '/'}
-                className="xbox-btn xbox-btn-primary w-full"
+                className="xbox-btn xbox-btn-primary w-full flex items-center justify-center gap-2"
               >
                 Ir para Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleLogout}
+                className="xbox-btn xbox-btn-outline w-full flex items-center justify-center gap-2 text-[var(--error)] border-[var(--error)] hover:bg-[var(--error)]/10"
+              >
+                <LogOut className="h-4 w-4" />
+                Sair da conta
               </button>
             </div>
           ) : (
@@ -107,7 +111,7 @@ export default function AuthComponent() {
                 <span className="text-xs text-[var(--text-muted)] uppercase">ou</span>
                 <div className="flex-1 h-px bg-[var(--border-subtle)]" />
               </div>
-              <button onClick={handleGuestMode} className="xbox-btn xbox-btn-outline w-full">
+              <button onClick={handleGuestMode} className="xbox-btn xbox-btn-outline w-full gap-2">
                 <UserX className="h-4 w-4" />
                 Entrar sem conta
               </button>
