@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 
-const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 15000, retries: number = 2): Promise<T> => {
+const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 30000, retries: number = 2): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
         let timeoutId: NodeJS.Timeout
         try {
@@ -374,13 +374,13 @@ export async function fetchLeaderboardData(currentUserId?: string) {
             withTimeout(() => supabase
                 .from('profiles')
                 .select('id, display_name, tier, email'),
-                20000 // Increase timeout to 20s for heavy leaderboard fetch
+                60000 // Increase timeout to 60s for heavy leaderboard fetch
             ),
             withTimeout(() => supabase
                 .from('registros_diarios')
                 .select('user_id, total_pts')
                 .gte('data', thirtyDaysAgo.toISOString().split('T')[0]),
-                20000 // Increase timeout to 20s for heavy leaderboard fetch
+                60000 // Increase timeout to 60s for heavy leaderboard fetch
             )
         ])
 
