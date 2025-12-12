@@ -35,15 +35,15 @@ export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-600">Perfil</h1>
+        <h1 className="text-3xl font-bold text-xbox-green">👤 Perfil</h1>
         <p className="text-gray-600">Gerencie suas configurações e conta</p>
       </header>
 
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-8 w-8 text-blue-600" />
+            <div className="w-16 h-16 bg-xbox-light rounded-full flex items-center justify-center">
+              <User className="h-8 w-8 text-xbox-green" />
             </div>
             <div>
               <h2 className="text-xl font-semibold">João Silva</h2>
@@ -91,10 +91,10 @@ export default function PerfilPage() {
           </div>
 
           {!isPremium && (
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-lg mb-4">
+            <div className="bg-gradient-to-r from-xbox-green to-xbox-blue text-white p-4 rounded-lg mb-4">
               <h3 className="font-semibold mb-2">Assine Premium por R$9,90/mês</h3>
               <p className="text-sm mb-3">Desbloqueie export PDF, templates customizados, notificações push e remoção de anúncios.</p>
-              <button className="bg-white text-blue-600 px-4 py-2 rounded-md font-semibold hover:bg-gray-100">
+              <button className="bg-white text-xbox-green px-4 py-2 rounded-md font-semibold hover:bg-gray-100 transition-colors">
                 Assinar Agora
               </button>
             </div>
@@ -103,8 +103,8 @@ export default function PerfilPage() {
           <div className="space-y-3">
             <button
               onClick={handleExportPDF}
-              className={`w-full flex items-center gap-3 p-3 rounded-md ${
-                isPremium ? 'bg-blue-50 hover:bg-blue-100' : 'bg-gray-50 cursor-not-allowed opacity-50'
+              className={`w-full flex items-center gap-3 p-3 rounded-md transition-colors ${
+                isPremium ? 'bg-xbox-light hover:bg-opacity-75' : 'bg-gray-50 cursor-not-allowed opacity-50'
               }`}
             >
               <Download className="h-5 w-5" />
@@ -116,8 +116,8 @@ export default function PerfilPage() {
 
             <button
               onClick={handleCustomTemplate}
-              className={`w-full flex items-center gap-3 p-3 rounded-md ${
-                isPremium ? 'bg-green-50 hover:bg-green-100' : 'bg-gray-50 cursor-not-allowed opacity-50'
+              className={`w-full flex items-center gap-3 p-3 rounded-md transition-colors ${
+                isPremium ? 'bg-xbox-light hover:bg-opacity-75' : 'bg-gray-50 cursor-not-allowed opacity-50'
               }`}
             >
               <FileText className="h-5 w-5" />
@@ -127,8 +127,8 @@ export default function PerfilPage() {
               </div>
             </button>
 
-            <div className={`flex items-center gap-3 p-3 rounded-md ${
-              isPremium ? 'bg-purple-50' : 'bg-gray-50 opacity-50'
+            <div className={`flex items-center gap-3 p-3 rounded-md transition-colors ${
+              isPremium ? 'bg-xbox-light' : 'bg-gray-50 opacity-50'
             }`}>
               <EyeOff className="h-5 w-5" />
               <div className="text-left">
@@ -158,7 +158,7 @@ export default function PerfilPage() {
               <input type="checkbox" className="toggle" />
             </div>
 
-            <button className="w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700">
+            <button className="w-full bg-xbox-red text-white py-2 rounded-md hover:bg-opacity-90 transition-colors font-semibold">
               Logout
             </button>
           </div>

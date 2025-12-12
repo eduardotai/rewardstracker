@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: "Rewards Tracker BR",
   description: "Gerenciador de Pontos Microsoft Rewards para usuários brasileiros",
   manifest: "/manifest.json",
-  themeColor: "#0078D4",
+  themeColor: "#107C10",
   viewport: "width=device-width, initial-scale=1",
 };
 

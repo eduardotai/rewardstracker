@@ -30,8 +30,8 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen p-6">
       <header className="mb-12 text-center">
-        <h1 className="text-4xl font-bold text-xbox-blue mb-2">Rewards Tracker BR</h1>
-        <p className="text-lg text-gray-800">Maximize seus pontos Microsoft Rewards no Brasil</p>
+        <h1 className="text-5xl font-bold text-xbox-green mb-2">🎮 Rewards Tracker BR</h1>
+        <p className="text-lg text-gray-700 font-medium">Maximize seus pontos Microsoft Rewards no Brasil</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">

@@ -27,21 +27,21 @@ export default function ResgatesPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-600">Resgates</h1>
+        <h1 className="text-3xl font-bold text-xbox-green">💳 Resgates</h1>
         <p className="text-gray-600">Gerencie seus resgates de pontos</p>
       </header>
 
       <div className="flex gap-4 mb-6">
         <button
           onClick={openAddModal}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"
+          className="bg-xbox-green text-white px-4 py-2 rounded-md hover:bg-opacity-90 flex items-center gap-2 transition-all"
         >
           <Plus size={20} />
           Adicionar Resgate
         </button>
         <button
           onClick={openSimulateModal}
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center gap-2"
+          className="bg-xbox-yellow text-gray-900 px-4 py-2 rounded-md hover:bg-opacity-90 flex items-center gap-2 transition-all font-semibold"
         >
           <Calculator size={20} />
           Simular Resgate

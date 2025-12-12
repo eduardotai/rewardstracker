@@ -80,7 +80,7 @@ export default function MensalPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-600">Mensal 2025</h1>
+        <h1 className="text-3xl font-bold text-xbox-green">📅 Mensal 2025</h1>
         <p className="text-gray-600">Heatmap dos seus pontos mensais</p>
       </header>
 
@@ -104,7 +104,7 @@ export default function MensalPage() {
         </div>
         <button
           onClick={exportCSV}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          className="bg-xbox-green text-white px-4 py-2 rounded-md hover:bg-opacity-90 transition-colors font-semibold"
         >
           Export CSV
         </button>

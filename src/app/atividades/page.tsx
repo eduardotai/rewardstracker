@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -23,38 +23,6 @@ type Atividade = {
 }
 
 const columnHelper = createColumnHelper<Atividade>()
-
-let deleteRow: (id: string) => void
-
-const columns: ColumnDef<Atividade, any>[] = [
-  columnHelper.accessor('nome', {
-    header: 'Nome',
-  }),
-  columnHelper.accessor('pts_esperados', {
-    header: 'Pts Esperados',
-  }),
-  columnHelper.accessor('frequencia', {
-    header: 'Frequência',
-  }),
-  columnHelper.accessor('categoria', {
-    header: 'Categoria',
-  }),
-  columnHelper.accessor('notas', {
-    header: 'Notas',
-  }),
-  columnHelper.display({
-    id: 'actions',
-    header: 'Ações',
-    cell: ({ row }) => (
-      <button
-        onClick={() => deleteRow(row.original.id)}
-        className="p-1 text-red-600 hover:text-red-800"
-      >
-        <Trash2 size={16} />
-      </button>
-    ),
-  }),
-]
 
 export default function AtividadesPage() {
   const [data, setData] = useState<Atividade[]>([
@@ -94,9 +62,39 @@ export default function AtividadesPage() {
 
   const [globalFilter, setGlobalFilter] = useState('')
 
-  deleteRow = (id: string) => {
+  const deleteRow = useCallback((id: string) => {
     setData(old => old.filter(r => r.id !== id))
-  }
+  }, [])
+
+  const columns: ColumnDef<Atividade, any>[] = [
+    columnHelper.accessor('nome', {
+      header: 'Nome',
+    }),
+    columnHelper.accessor('pts_esperados', {
+      header: 'Pts Esperados',
+    }),
+    columnHelper.accessor('frequencia', {
+      header: 'Frequência',
+    }),
+    columnHelper.accessor('categoria', {
+      header: 'Categoria',
+    }),
+    columnHelper.accessor('notas', {
+      header: 'Notas',
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: 'Ações',
+      cell: ({ row }) => (
+        <button
+          onClick={() => deleteRow(row.original.id)}
+          className="p-1 text-xbox-red hover:text-red-700 transition-colors"
+        >
+          <Trash2 size={16} />
+        </button>
+      ),
+    }),
+  ]
 
   const table = useReactTable({
     data,
@@ -128,7 +126,7 @@ export default function AtividadesPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-600">Atividades BR</h1>
+        <h1 className="text-3xl font-bold text-xbox-green">Atividades BR</h1>
         <p className="text-gray-600">Gerencie suas atividades personalizadas</p>
       </header>
 
@@ -136,12 +134,12 @@ export default function AtividadesPage() {
         <input
           value={globalFilter ?? ''}
           onChange={(event) => setGlobalFilter(String(event.target.value))}
-          className="p-2 border rounded-md w-64"
+          className="p-2 border rounded-md w-64 focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors"
           placeholder="Buscar atividades..."
         />
         <button
           onClick={addNewRow}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"
+          className="bg-xbox-green text-white px-4 py-2 rounded-md hover:bg-opacity-90 flex items-center gap-2 transition-all"
         >
           <Plus size={20} />
           Adicionar Atividade

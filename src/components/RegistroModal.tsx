@@ -8,8 +8,8 @@ import { X, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const registroSchema = z.object({
-  data: z.string(),
-  atividade: z.string(),
+  data: z.string().min(1, 'Data é obrigatória'),
+  atividade: z.string().min(1, 'Selecione uma atividade'),
   pc_busca: z.number().min(0),
   mobile_busca: z.number().min(0),
   quiz: z.number().min(0),
@@ -26,8 +26,6 @@ interface RegistroModalProps {
 }
 
 export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
-  const [totalPts, setTotalPts] = useState(0)
-
   const { register, handleSubmit, watch, formState: { errors } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
     defaultValues: {
@@ -51,11 +49,33 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
     return (pc + mobile) * 5 + quiz * 10 + xbox * 10
   }
 
-  const onSubmit = (data: RegistroForm) => {
-    console.log('Registro diário:', { ...data, total_pts: calculateTotal() })
-    toast.success('Registro salvo com sucesso!')
-    // TODO: Save to Supabase
-    onClose()
+  const onSubmit = async (data: RegistroForm) => {
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const totalPts = calculateTotal()
+      
+      const { error } = await supabase
+        .from('registros_diarios')
+        .insert([
+          {
+            data: data.data,
+            atividade: data.atividade,
+            pc_busca: data.pc_busca,
+            mobile_busca: data.mobile_busca,
+            quiz: data.quiz,
+            xbox: data.xbox,
+            total_pts: totalPts,
+            meta_batida: data.meta_batida,
+            notas: data.notas || '',
+          }
+        ])
+      
+      if (error) throw error
+      toast.success('Registro salvo com sucesso!')
+      onClose()
+    } catch (error) {
+      toast.error('Erro ao salvar registro')
+    }
   }
 
   if (!isOpen) return null
@@ -84,6 +104,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
               {...register('data')}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors"
             />
+            {errors.data && <p className="text-xbox-red text-sm mt-1">{errors.data.message}</p>}
           </div>
 
           <div>
@@ -98,6 +119,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
               <option value="Xbox">🎮 Missões Xbox</option>
               <option value="Outros">📝 Outros</option>
             </select>
+            {errors.atividade && <p className="text-xbox-red text-sm mt-1">{errors.atividade.message}</p>}
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg">

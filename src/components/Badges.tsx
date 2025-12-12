@@ -22,7 +22,7 @@ const calculateBadges = () => {
       description: '5000 pontos acumulados',
       icon: Target,
       earned: totalSaldo >= 5000,
-      color: 'text-blue-500',
+      color: 'text-xbox-green',
     },
     {
       id: 'monthly_champion',

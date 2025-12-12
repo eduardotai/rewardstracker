@@ -32,14 +32,14 @@ export default function ProjecoesPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-600">Projeções</h1>
+        <h1 className="text-3xl font-bold text-xbox-green">📊 Projeções</h1>
         <p className="text-gray-600">Veja suas metas e projeções futuras</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-blue-500 mr-3" />
+            <Calendar className="h-8 w-8 text-xbox-green mr-3" />
             <div>
               <p className="text-sm text-gray-600">Dias para 12k pts</p>
               <p className="text-2xl font-bold">{daysTo12k} dias</p>
@@ -107,11 +107,11 @@ export default function ProjecoesPage() {
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold mb-4">Sugestões para Melhorar</h2>
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
-            <TrendingUp className="h-6 w-6 text-blue-500 mt-1" />
+          <div className="flex items-start gap-3 p-4 bg-xbox-light rounded-lg border-l-4 border-xbox-green">
+            <TrendingUp className="h-6 w-6 text-xbox-green mt-1" />
             <div>
-              <h3 className="font-semibold text-blue-900">Aumente Buscas Diárias</h3>
-              <p className="text-sm text-blue-700">
+              <h3 className="font-semibold text-xbox-green">Aumente Buscas Diárias</h3>
+              <p className="text-sm text-gray-700">
                 Com 200 pontos/dia, você alcançaria 12k em {Math.ceil((12000 - currentPts) / 200)} dias.
               </p>
             </div>
