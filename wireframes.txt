@@ -1,0 +1,51 @@
+Wireframes Simples (Texto) - Rewards Tracker BR
+
+Header: Logo | Dashboard | Registro | Gráficos | Perfil
+[Sidebar: Atividades | Resgates | Projeções | Mensal]
+[Main: Cards KPIs | Botão Log Hoje]
+[Footer: Dicas BR | Suporte]
+
+Tela Home (Dashboard):
+- Header com navegação
+- Sidebar esquerda com menu
+- Main content:
+  - Cards: Saldo Atual (ex: 8500 pts), Progresso Meta (barra 70%), Streak (5 dias), Média Diária (150 pts)
+  - Gráfico mini-linha de pontos últimos 7 dias
+  - Botão grande "Log Hoje" no centro
+- Footer com links
+
+Tela Registro Modal:
+- Modal popup:
+  - Data picker (default hoje)
+  - Dropdown Atividade (PC Busca, Mobile Busca, Quiz, Xbox, etc.)
+  - Campos numéricos: PC Busca (0), Mobile (0), Quiz (0), Xbox (0)
+  - Checkbox Meta Batida
+  - Campo Notas
+  - Botões: Salvar, Cancelar
+
+Tela Gráficos:
+- Header
+- Sidebar
+- Main:
+  - Filtros: Data range, Categoria
+  - 4 gráficos: Linha diária, Pizza por fonte, Barra resgates, Linha mensal
+- Footer
+
+Tela Resgates:
+- Header
+- Sidebar
+- Main:
+  - Tabela resgates: Data, Item, Pts Usados, Valor BRL, Custo Efetivo
+  - Botão "Adicionar Resgate" -> Modal com campos
+  - Botão "Simular Resgate" -> Modal com inventory BRL
+
+Tela Perfil:
+- Header
+- Sidebar
+- Main:
+  - Info usuário: Email, Tier Xbox (dropdown), Meta Mensal (input)
+  - Botões: Export PDF (premium), Compartilhar Template, Logout
+
+Cores: Azul MS #0078D4, Verde #107C10, Fundo claro/dark toggle.
+
+Mobile: Sidebar collapsa, cards stack vertical, touch-friendly.
