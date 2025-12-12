@@ -112,13 +112,34 @@ export default function ResgatesPage() {
     setIsModalOpen(true)
   }
 
-  const handleModalClose = (resgate?: { item: string; pts_usados: number; valor_brl: number; custo_efetivo: number }) => {
+  const handleModalClose = () => {
     setIsModalOpen(false)
-    if (resgate && modalMode === 'add') {
-      addResgate({
-        data: new Date().toISOString().split('T')[0],
-        ...resgate,
-      })
+  }
+
+  const handleSaveResgate = async (data: { item: string; pts_usados: number; valor_brl: number; custo_efetivo: number }) => {
+    const today = new Date().toISOString().split('T')[0]
+
+    // Create resgate object
+    const newResgate: Omit<DisplayResgate, 'id'> = {
+      data: today,
+      item: data.item,
+      pts_usados: data.pts_usados,
+      valor_brl: data.valor_brl,
+      custo_efetivo: data.custo_efetivo,
+    }
+
+    addResgate(newResgate)
+    setIsModalOpen(false)
+
+    // Persist to Supabase if authenticated
+    if (!isGuest && user) {
+      try {
+        const { insertResgate } = await import('@/hooks/useData')
+        await insertResgate(user.id, newResgate)
+      } catch (error) {
+        console.error('Error saving resgate:', error)
+        // Optionally revert optimistic update or show toast error
+      }
     }
   }
 
@@ -294,6 +315,7 @@ export default function ResgatesPage() {
       <ResgateModal
         isOpen={isModalOpen}
         onClose={handleModalClose}
+        onSave={handleSaveResgate}
         mode={modalMode}
       />
     </div>

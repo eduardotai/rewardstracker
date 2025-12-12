@@ -18,6 +18,7 @@ type ResgateForm = z.infer<typeof resgateSchema>
 interface ResgateModalProps {
   isOpen: boolean
   onClose: () => void
+  onSave: (data: ResgateForm & { custo_efetivo: number }) => void
   mode: 'add' | 'simulate'
 }
 
@@ -28,7 +29,7 @@ const inventory = [
   { name: 'R$50 Amazon Gift Card', pts: 5250, brl: 50 },
 ]
 
-export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProps) {
+export default function ResgateModal({ isOpen, onClose, onSave, mode }: ResgateModalProps) {
   const [selectedItem, setSelectedItem] = useState('')
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ResgateForm>({
@@ -39,31 +40,13 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
   const watchedBrl = watch('valor_brl') || 0
   const custoEfetivo = watchedBrl > 0 ? Math.round(watchedPts / watchedBrl) : 0
 
-  const onSubmit = async (data: ResgateForm) => {
-    try {
-      if (mode === 'add') {
-        const { supabase } = await import('@/lib/supabase')
-
-        const { error } = await supabase
-          .from('resgates')
-          .insert([
-            {
-              data: new Date().toISOString().split('T')[0],
-              item: data.item,
-              pts_usados: data.pts_usados,
-              valor_brl: data.valor_brl,
-              custo_efetivo: custoEfetivo,
-            }
-          ])
-
-        if (error) throw error
-        toast.success('Resgate adicionado com sucesso!')
-      } else {
-        toast.success(`Simulação: ${custoEfetivo} pts por R$1`)
-      }
+  const onSubmit = (data: ResgateForm) => {
+    if (mode === 'add') {
+      onSave({ ...data, custo_efetivo: custoEfetivo })
       onClose()
-    } catch {
-      toast.error('Erro ao processar resgate')
+    } else {
+      toast.success(`Simulação: ${custoEfetivo} pts por R$1`)
+      onClose()
     }
   }
 
@@ -77,7 +60,7 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
   if (!isOpen) return null
 
   return (
-    <div className="xbox-modal-overlay" onClick={onClose}>
+    <div className="xbox-modal-overlay" onClick={() => onClose()}>
       <div className="xbox-modal p-6" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -88,7 +71,7 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
             {mode === 'add' ? 'Adicionar Resgate' : 'Simular Resgate'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="p-2 hover:bg-[var(--bg-tertiary)] rounded transition-colors text-[var(--text-secondary)] hover:text-white"
           >
             <X size={20} />
@@ -106,8 +89,8 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
                   type="button"
                   onClick={() => selectItem(item)}
                   className={`w-full p-4 rounded text-left transition-all border ${selectedItem === item.name
-                      ? 'border-[var(--xbox-green)] bg-[var(--xbox-green)]/10'
-                      : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:border-[var(--xbox-green)]/50'
+                    ? 'border-[var(--xbox-green)] bg-[var(--xbox-green)]/10'
+                    : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:border-[var(--xbox-green)]/50'
                     }`}
                 >
                   <div className="flex justify-between items-center">
@@ -180,7 +163,7 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => onClose()}
               className="xbox-btn xbox-btn-outline"
             >
               Cancelar
