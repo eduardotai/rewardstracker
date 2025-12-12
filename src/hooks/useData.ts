@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 
 // Helper to timeout promises
-const withTimeout = async <T>(promise: PromiseLike<T>, ms: number = 10000): Promise<T> => {
+const withTimeout = async <T>(promise: PromiseLike<T>, ms: number = 15000): Promise<T> => {
     let timeoutId: NodeJS.Timeout
     const timeoutPromise = new Promise<T>((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms)

@@ -37,25 +37,33 @@ export default function ResgatesPage() {
     const loadData = async () => {
       if (authLoading) return
 
-      if (isGuest && guestData) {
-        // Load from guest data context
-        setResgates(guestData.resgates || [])
-        setLoading(false)
-      } else if (user) {
-        // Load from Supabase for authenticated users
-        const { data } = await fetchResgates(user.id)
-        if (data) {
-          setResgates(data.map(r => ({
-            id: r.id,
-            data: r.data,
-            item: r.item,
-            pts_usados: r.pts_usados,
-            valor_brl: r.valor_brl,
-            custo_efetivo: r.custo_efetivo,
-          })))
+      try {
+        if (isGuest && guestData) {
+          // Load from guest data context
+          setResgates(guestData.resgates || [])
+          setLoading(false)
+        } else if (user) {
+          // Load from Supabase for authenticated users
+          const { data, error } = await fetchResgates(user.id)
+          if (error) throw error
+
+          if (data) {
+            setResgates(data.map(r => ({
+              id: r.id,
+              data: r.data,
+              item: r.item,
+              pts_usados: r.pts_usados,
+              valor_brl: r.valor_brl,
+              custo_efetivo: r.custo_efetivo,
+            })))
+          }
+          setLoading(false)
+        } else {
+          setLoading(false)
         }
-        setLoading(false)
-      } else {
+      } catch (error) {
+        console.error('Error loading resgates:', error)
+        // Ensure loading state is cleared even on error so UI doesn't freeze
         setLoading(false)
       }
     }

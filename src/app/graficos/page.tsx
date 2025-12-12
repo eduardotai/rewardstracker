@@ -35,22 +35,27 @@ export default function GraficosPage() {
     const loadData = async () => {
       if (authLoading) return
 
-      if (isGuest && guestData) {
-        // Load from guest data context
-        setRegistros(guestData.registros as unknown as DailyRecord[] || [])
-        setResgates(guestData.resgates as unknown as Resgate[] || [])
-        setLoading(false)
-      } else if (user) {
-        // Load from Supabase for authenticated users
-        const [recordsRes, resgatesRes] = await Promise.all([
-          fetchDailyRecords(user.id),
-          fetchResgates(user.id),
-        ])
+      try {
+        if (isGuest && guestData) {
+          // Load from guest data context
+          setRegistros(guestData.registros as unknown as DailyRecord[] || [])
+          setResgates(guestData.resgates as unknown as Resgate[] || [])
+          setLoading(false)
+        } else if (user) {
+          // Load from Supabase for authenticated users
+          const [recordsRes, resgatesRes] = await Promise.all([
+            fetchDailyRecords(user.id),
+            fetchResgates(user.id),
+          ])
 
-        if (recordsRes.data) setRegistros(recordsRes.data)
-        if (resgatesRes.data) setResgates(resgatesRes.data)
-        setLoading(false)
-      } else {
+          if (recordsRes.data) setRegistros(recordsRes.data)
+          if (resgatesRes.data) setResgates(resgatesRes.data)
+          setLoading(false)
+        } else {
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error loading charts data:', error)
         setLoading(false)
       }
     }
