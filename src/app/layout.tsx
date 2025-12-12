@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Rewards Tracker BR",
   description: "Gerenciador de Pontos Microsoft Rewards para usuários brasileiros",
+  manifest: "/manifest.json",
+  themeColor: "#0078D4",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
