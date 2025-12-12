@@ -127,3 +127,64 @@ export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' 
 
     return { data, error }
 }
+
+export interface LeaderboardUser {
+    rank: number
+    name: string
+    pts: number
+    tier: string
+    isCurrentUser: boolean
+}
+
+// Fetch dynamic leaderboard data
+export async function fetchLeaderboardData(currentUserId?: string) {
+    // 1. Fetch all profiles to get names and tiers
+    // Note: This requires RLS to allow reading 'profiles' table publicly or at least authenticated
+    const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, display_name, tier, email')
+
+    if (profilesError) {
+        console.error('Error fetching profiles for leaderboard:', profilesError)
+        return []
+    }
+
+    // 2. Fetch all daily records for the last 30 days to aggregate points
+    // Note: If RLS restricts reading others' records, this will only return current user's records
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const { data: records, error: recordsError } = await supabase
+        .from('registros_diarios')
+        .select('user_id, total_pts')
+        .gte('data', thirtyDaysAgo.toISOString().split('T')[0])
+
+    if (recordsError) {
+        console.error('Error fetching records for leaderboard:', recordsError)
+        return []
+    }
+
+    // 3. Aggregate points by user
+    const userPoints: Record<string, number> = {}
+    records?.forEach(record => {
+        // Some records might have null user_id if not migrated properly, skip them
+        if (record.user_id) {
+            userPoints[record.user_id] = (userPoints[record.user_id] || 0) + (record.total_pts || 0)
+        }
+    })
+
+    // 4. Map profiles to leaderboard format
+    const leaderboard: LeaderboardUser[] = profiles.map(profile => ({
+        rank: 0, // Will assign later
+        name: profile.display_name || profile.email?.split('@')[0] || 'Usuário',
+        pts: userPoints[profile.id] || 0,
+        tier: profile.tier || 'Sem',
+        isCurrentUser: profile.id === currentUserId
+    }))
+
+    // 5. Sort by points (descending) and assign rank
+    return leaderboard
+        .sort((a, b) => b.pts - a.pts)
+        .map((user, index) => ({ ...user, rank: index + 1 }))
+        .slice(0, 10) // Top 10 only
+}
