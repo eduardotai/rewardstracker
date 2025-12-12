@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { X } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const registroSchema = z.object({
   data: z.string(),
@@ -51,8 +52,14 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
   }
 
   const onSubmit = (data: RegistroForm) => {
-    console.log('Registro:', { ...data, total_pts: calculateTotal() })
-    // TODO: Save to Supabase
+    if (mode === 'add') {
+      console.log('Adicionar resgate:', { ...data, data: new Date().toISOString().split('T')[0], custo_efetivo: custoEfetivo })
+      toast.success('Resgate adicionado com sucesso!')
+      // TODO: Save to Supabase
+    } else {
+      console.log('Simular resgate:', { ...data, custo_efetivo: custoEfetivo })
+      toast.success('Simulação concluída!')
+    }
     onClose()
   }
 
