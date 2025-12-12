@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { Plus, Calculator, Home, Activity, BarChart3, PiggyBank, User, Gift, Menu, X as CloseIcon, CreditCard, Trash2 } from 'lucide-react'
 import ResgateModal from '@/components/ResgateModal'
 import { useAuth } from '@/contexts/AuthContext'
@@ -146,7 +147,7 @@ export default function ResgatesPage() {
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.label}>
-                <a
+                <Link
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
                     ? 'bg-[var(--bg-tertiary)] text-white'
@@ -156,7 +157,7 @@ export default function ResgatesPage() {
                   {item.active && <span className="xbox-nav-indicator" />}
                   <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -178,12 +179,12 @@ export default function ResgatesPage() {
               <ul className="space-y-1">
                 {navItems.map((item) => (
                   <li key={item.label}>
-                    <a href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium relative ${item.active ? 'bg-[var(--bg-tertiary)] text-white' : 'text-[var(--text-secondary)]'
+                    <Link href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium relative ${item.active ? 'bg-[var(--bg-tertiary)] text-white' : 'text-[var(--text-secondary)]'
                       }`}>
                       {item.active && <span className="xbox-nav-indicator" />}
                       <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                       {item.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

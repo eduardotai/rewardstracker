@@ -178,9 +178,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     useEffect(() => {
+        // Safety timeout to prevent infinite loading
+        const timeout = setTimeout(() => {
+            if (loading) {
+                console.log('AuthContext: Loading timed out, forcing false')
+                setLoading(false)
+            }
+        }, 5000)
+
         // Check for guest mode first
         if (loadGuestMode()) {
             setLoading(false)
+            clearTimeout(timeout)
             return
         }
 
@@ -191,6 +200,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (session?.user) {
                 fetchProfile(session.user.id, session.user.email)
             }
+            setLoading(false)
+            clearTimeout(timeout)
+        }).catch(err => {
+            console.error('AuthContext: GetSession error', err)
             setLoading(false)
         })
 
@@ -215,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         )
 
         return () => {
+            clearTimeout(timeout)
             subscription.unsubscribe()
         }
     }, [])

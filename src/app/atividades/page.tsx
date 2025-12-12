@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import {
   useReactTable,
   getCoreRowModel,
@@ -149,7 +150,7 @@ export default function AtividadesPage() {
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.label}>
-                <a
+                <Link
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
                     ? 'bg-[var(--bg-tertiary)] text-white'
@@ -159,7 +160,7 @@ export default function AtividadesPage() {
                   {item.active && <span className="xbox-nav-indicator" />}
                   <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -181,12 +182,12 @@ export default function AtividadesPage() {
               <ul className="space-y-1">
                 {navItems.map((item) => (
                   <li key={item.label}>
-                    <a href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium relative ${item.active ? 'bg-[var(--bg-tertiary)] text-white' : 'text-[var(--text-secondary)]'
+                    <Link href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium relative ${item.active ? 'bg-[var(--bg-tertiary)] text-white' : 'text-[var(--text-secondary)]'
                       }`}>
                       {item.active && <span className="xbox-nav-indicator" />}
                       <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                       {item.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

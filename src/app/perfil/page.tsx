@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { User, Crown, Download, FileText, EyeOff, LogOut, Home, Activity, BarChart3, PiggyBank, Gift, Menu, X as CloseIcon, Bell, Palette, RotateCcw } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { useAuth } from '@/contexts/AuthContext'
@@ -185,7 +186,7 @@ export default function PerfilPage() {
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.label}>
-                <a
+                <Link
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
                     ? 'bg-[var(--bg-tertiary)] text-white'
@@ -195,7 +196,7 @@ export default function PerfilPage() {
                   {item.active && <span className="xbox-nav-indicator" />}
                   <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -217,12 +218,12 @@ export default function PerfilPage() {
               <ul className="space-y-1">
                 {navItems.map((item) => (
                   <li key={item.label}>
-                    <a href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium relative ${item.active ? 'bg-[var(--bg-tertiary)] text-white' : 'text-[var(--text-secondary)]'
+                    <Link href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium relative ${item.active ? 'bg-[var(--bg-tertiary)] text-white' : 'text-[var(--text-secondary)]'
                       }`}>
                       {item.active && <span className="xbox-nav-indicator" />}
                       <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                       {item.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
