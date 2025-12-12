@@ -59,8 +59,11 @@ export async function middleware(request: NextRequest) {
     // Check if user is authenticated
     const { data: { session } } = await supabase.auth.getSession()
 
+    console.log('Middleware: Path:', pathname, 'Session:', session?.user?.email ? 'Authenticated' : 'No Session')
+
     if (!session) {
         // Redirect to login page
+        console.log('Middleware: Unauthenticated access, redirecting to /auth')
         const redirectUrl = new URL('/auth', request.url)
         redirectUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(redirectUrl)

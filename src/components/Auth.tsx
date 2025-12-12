@@ -12,6 +12,8 @@ const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
 
 const defaultGuestData = {
   registros: [],
+  atividades: [],
+  resgates: [],
   profile: {
     display_name: 'Visitante',
     tier: 'Sem',
@@ -25,14 +27,17 @@ export default function AuthComponent() {
 
   useEffect(() => {
     setRedirectTo(`${window.location.origin}/auth/callback`)
+    console.log('Auth Component: Mounted, redirectTo set to', `${window.location.origin}/auth/callback`)
   }, [])
 
   const handleGuestMode = () => {
+    console.log('Auth Component: Entering as guest')
     // Set localStorage for guest data
     localStorage.setItem(GUEST_STORAGE_KEY, 'true')
     localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(defaultGuestData))
     // Set cookie for middleware
     document.cookie = 'rewards_guest_mode=true; path=/; max-age=31536000'
+    console.log('Auth Component: Redirecting to /')
     router.push('/')
   }
 
