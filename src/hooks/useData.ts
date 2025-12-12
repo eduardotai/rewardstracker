@@ -112,6 +112,27 @@ export async function fetchDailyRecords(userId: string, limit?: number) {
     return { data: data as DailyRecord[] | null, error }
 }
 
+// Fetch monthly status for calendar
+export async function fetchMonthlyStatus(userId: string, month: number, year: number) {
+    const startOfMonth = new Date(year, month, 1)
+    const endOfMonth = new Date(year, month + 1, 0)
+
+    const cacheKey = `${userId}_${year}_${month}`
+
+    // Check local cache if needed, but for now strict fetch to ensure sync
+    const { data: records, error } = await withTimeout(() => supabase
+        .from('registros_diarios')
+        .select('data, meta_batida, total_pts')
+        .eq('user_id', userId)
+        .gte('data', startOfMonth.toISOString().split('T')[0])
+        .lte('data', endOfMonth.toISOString().split('T')[0])
+    )
+
+    if (error) return { data: [], error }
+
+    return { data: records as Pick<DailyRecord, 'data' | 'meta_batida' | 'total_pts'>[], error: null }
+}
+
 // Fetch records for last N days
 export async function fetchWeeklyRecords(userId: string) {
     // Use full daily records cache if available to filter locally
