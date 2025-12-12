@@ -114,24 +114,28 @@ export default function Dashboard() {
       }
 
       try {
-        // Fetch weekly records for chart
-        const { data: weekly } = await fetchWeeklyRecords(user.id)
-        if (weekly) {
-          const chartData = weekly.map(r => ({
+        // Fetch all data in parallel
+        const [weeklyRes, recentRes, userStats] = await Promise.all([
+          fetchWeeklyRecords(user.id),
+          fetchDailyRecords(user.id, 10),
+          fetchUserStats(user.id)
+        ])
+
+        // Process Weekly
+        if (weeklyRes.data) {
+          const chartData = weeklyRes.data.map(r => ({
             day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
             pts: r.total_pts
           }))
           setWeeklyData(chartData)
         }
 
-        // Fetch recent records
-        const { data: recent } = await fetchDailyRecords(user.id, 10)
-        if (recent) {
-          setRecentRecords(recent)
+        // Process Recent
+        if (recentRes.data) {
+          setRecentRecords(recentRes.data)
         }
 
-        // Fetch stats
-        const userStats = await fetchUserStats(user.id)
+        // Process Stats
         setStats(userStats)
       } catch (error) {
         console.error('Error loading data:', error)

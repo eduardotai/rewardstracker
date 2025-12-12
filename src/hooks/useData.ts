@@ -161,26 +161,29 @@ export interface LeaderboardUser {
 // Fetch dynamic leaderboard data
 export async function fetchLeaderboardData(currentUserId?: string) {
     try {
-        // 1. Fetch all profiles to get names and tiers
-        const { data: profiles, error: profilesError } = await withTimeout(supabase
-            .from('profiles')
-            .select('id, display_name, tier, email')
-        )
+        // Fetch profiles and records in parallel to verify performance
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+        const [profilesResult, recordsResult] = await Promise.all([
+            withTimeout(supabase
+                .from('profiles')
+                .select('id, display_name, tier, email')
+            ),
+            withTimeout(supabase
+                .from('registros_diarios')
+                .select('user_id, total_pts')
+                .gte('data', thirtyDaysAgo.toISOString().split('T')[0])
+            )
+        ])
+
+        const { data: profiles, error: profilesError } = profilesResult
+        const { data: records, error: recordsError } = recordsResult
 
         if (profilesError) {
             console.error('Error fetching profiles for leaderboard:', profilesError)
             return []
         }
-
-        // 2. Fetch all daily records for the last 30 days to aggregate points
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-        const { data: records, error: recordsError } = await withTimeout(supabase
-            .from('registros_diarios')
-            .select('user_id, total_pts')
-            .gte('data', thirtyDaysAgo.toISOString().split('T')[0])
-        )
 
         if (recordsError) {
             console.error('Error fetching records for leaderboard:', recordsError)
