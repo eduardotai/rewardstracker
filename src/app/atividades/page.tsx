@@ -24,135 +24,35 @@ type Atividade = {
 
 const columnHelper = createColumnHelper<Atividade>()
 
+let deleteRow: (id: string) => void
+
 const columns: ColumnDef<Atividade, any>[] = [
   columnHelper.accessor('nome', {
     header: 'Nome',
-    cell: ({ getValue, row, table }) => {
-      const isEditing = table.options.meta?.editingRow === row.id
-      const value = getValue()
-      return isEditing ? (
-        <input
-          value={value}
-          onChange={(e) => table.options.meta?.updateData(row.index, 'nome', e.target.value)}
-          className="w-full p-1 border rounded"
-        />
-      ) : (
-        value
-      )
-    },
   }),
   columnHelper.accessor('pts_esperados', {
     header: 'Pts Esperados',
-    cell: ({ getValue, row, table }) => {
-      const isEditing = table.options.meta?.editingRow === row.id
-      const value = getValue()
-      return isEditing ? (
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => table.options.meta?.updateData(row.index, 'pts_esperados', parseInt(e.target.value))}
-          className="w-full p-1 border rounded"
-        />
-      ) : (
-        value
-      )
-    },
   }),
   columnHelper.accessor('frequencia', {
     header: 'Frequência',
-    cell: ({ getValue, row, table }) => {
-      const isEditing = table.options.meta?.editingRow === row.id
-      const value = getValue()
-      return isEditing ? (
-        <select
-          value={value}
-          onChange={(e) => table.options.meta?.updateData(row.index, 'frequencia', e.target.value)}
-          className="w-full p-1 border rounded"
-        >
-          <option value="Diária">Diária</option>
-          <option value="Semanal">Semanal</option>
-          <option value="Mensal">Mensal</option>
-          <option value="Única">Única</option>
-        </select>
-      ) : (
-        value
-      )
-    },
   }),
   columnHelper.accessor('categoria', {
     header: 'Categoria',
-    cell: ({ getValue, row, table }) => {
-      const isEditing = table.options.meta?.editingRow === row.id
-      const value = getValue()
-      return isEditing ? (
-        <select
-          value={value}
-          onChange={(e) => table.options.meta?.updateData(row.index, 'categoria', e.target.value)}
-          className="w-full p-1 border rounded"
-        >
-          <option value="Buscas">Buscas</option>
-          <option value="Quiz">Quiz</option>
-          <option value="Xbox">Xbox</option>
-          <option value="Outros">Outros</option>
-        </select>
-      ) : (
-        value
-      )
-    },
   }),
   columnHelper.accessor('notas', {
     header: 'Notas',
-    cell: ({ getValue, row, table }) => {
-      const isEditing = table.options.meta?.editingRow === row.id
-      const value = getValue()
-      return isEditing ? (
-        <input
-          value={value}
-          onChange={(e) => table.options.meta?.updateData(row.index, 'notas', e.target.value)}
-          className="w-full p-1 border rounded"
-        />
-      ) : (
-        value
-      )
-    },
   }),
   columnHelper.display({
     id: 'actions',
     header: 'Ações',
-    cell: ({ row, table }) => {
-      const isEditing = table.options.meta?.editingRow === row.id
-      return isEditing ? (
-        <div className="flex gap-2">
-          <button
-            onClick={() => table.options.meta?.saveRow(row.id)}
-            className="p-1 text-green-600 hover:text-green-800"
-          >
-            <Save size={16} />
-          </button>
-          <button
-            onClick={() => table.options.meta?.cancelEdit()}
-            className="p-1 text-gray-600 hover:text-gray-800"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          <button
-            onClick={() => table.options.meta?.startEdit(row.id)}
-            className="p-1 text-blue-600 hover:text-blue-800"
-          >
-            <Edit size={16} />
-          </button>
-          <button
-            onClick={() => table.options.meta?.deleteRow(row.id)}
-            className="p-1 text-red-600 hover:text-red-800"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      )
-    },
+    cell: ({ row }) => (
+      <button
+        onClick={() => deleteRow(row.original.id)}
+        className="p-1 text-red-600 hover:text-red-800"
+      >
+        <Trash2 size={16} />
+      </button>
+    ),
   }),
 ]
 
@@ -194,6 +94,10 @@ export default function AtividadesPage() {
 
   const [globalFilter, setGlobalFilter] = useState('')
 
+  deleteRow = (id: string) => {
+    setData(old => old.filter(r => r.id !== id))
+  }
+
   const table = useReactTable({
     data,
     columns,
@@ -206,38 +110,6 @@ export default function AtividadesPage() {
       globalFilter,
     },
     onGlobalFilterChange: setGlobalFilter,
-    meta: {
-      editingRow: null as string | null,
-      updateData: (rowIndex: number, columnId: string, value: any) => {
-        setData(old =>
-          old.map((row, index) =>
-            index === rowIndex
-              ? {
-                  ...old[rowIndex]!,
-                  [columnId]: value,
-                }
-              : row
-          )
-        )
-      },
-      startEdit: (rowId: string) => {
-        table.options.meta!.editingRow = rowId
-        table.setState({ ...table.getState() })
-      },
-      saveRow: (rowId: string) => {
-        // TODO: Save to Supabase
-        console.log('Saving row:', rowId)
-        table.options.meta!.editingRow = null
-        table.setState({ ...table.getState() })
-      },
-      cancelEdit: () => {
-        table.options.meta!.editingRow = null
-        table.setState({ ...table.getState() })
-      },
-      deleteRow: (rowId: string) => {
-        setData(old => old.filter(row => row.id !== rowId))
-      },
-    },
   })
 
   const addNewRow = () => {
@@ -251,7 +123,6 @@ export default function AtividadesPage() {
       notas: '',
     }
     setData(old => [...old, newRow])
-    table.options.meta!.startEdit(newId)
   }
 
   return (
