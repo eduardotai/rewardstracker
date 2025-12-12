@@ -1,3 +1,5 @@
+'use client'
+
 import AuthComponent from '@/components/Auth'
 
 export default function AuthPage() {
