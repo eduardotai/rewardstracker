@@ -6,11 +6,21 @@ import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { supabase } from '@/lib/supabase'
 import { Gift, UserX } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+
+const GUEST_STORAGE_KEY = 'rewards_tracker_guest_mode'
+const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
+
+const defaultGuestData = {
+  registros: [],
+  profile: {
+    display_name: 'Visitante',
+    tier: 'Sem',
+    meta_mensal: 12000,
+  }
+}
 
 export default function AuthComponent() {
   const router = useRouter()
-  const { enterAsGuest } = useAuth()
   const [redirectTo, setRedirectTo] = useState('')
 
   useEffect(() => {
@@ -18,9 +28,11 @@ export default function AuthComponent() {
   }, [])
 
   const handleGuestMode = () => {
+    // Set localStorage for guest data
+    localStorage.setItem(GUEST_STORAGE_KEY, 'true')
+    localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(defaultGuestData))
     // Set cookie for middleware
     document.cookie = 'rewards_guest_mode=true; path=/; max-age=31536000'
-    enterAsGuest()
     router.push('/')
   }
 
