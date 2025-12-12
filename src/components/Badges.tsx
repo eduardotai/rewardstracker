@@ -61,9 +61,9 @@ export default function Badges() {
                   : 'border-gray-200 bg-gray-50 opacity-50'
               }`}
             >
-              <Icon className={`h-8 w-8 mx-auto mb-2 ${badge.earned ? badge.color : 'text-gray-400'}`} />
-              <h3 className="font-semibold text-sm">{badge.name}</h3>
-               <p className="text-xs text-gray-800">{badge.description}</p>
+              <Icon className={`h-8 w-8 mx-auto mb-2 ${badge.earned ? badge.color : 'text-gray-600'}`} />
+              <h3 className="font-bold text-sm text-gray-900">{badge.name}</h3>
+               <p className="text-sm font-semibold text-gray-700">{badge.description}</p>
             </div>
           )
         })}

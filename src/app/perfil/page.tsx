@@ -47,7 +47,7 @@ export default function PerfilPage() {
             </div>
             <div>
               <h2 className="text-xl font-semibold">João Silva</h2>
-              <p className="text-gray-600">joao@email.com</p>
+              <p className="text-gray-700 font-medium">joao@email.com</p>
             </div>
           </div>
 
@@ -110,7 +110,7 @@ export default function PerfilPage() {
               <Download className="h-5 w-5" />
               <div className="text-left">
                 <div className="font-medium">Exportar Relatório PDF</div>
-                <div className="text-sm text-gray-600">Baixe seu histórico completo</div>
+                <div className="text-sm font-semibold text-gray-700">Baixe seu histórico completo</div>
               </div>
             </button>
 
@@ -123,7 +123,7 @@ export default function PerfilPage() {
               <FileText className="h-5 w-5" />
               <div className="text-left">
                 <div className="font-medium">Templates Customizados</div>
-                <div className="text-sm text-gray-600">Crie relatórios personalizados</div>
+                <div className="text-sm font-semibold text-gray-700">Crie relatórios personalizados</div>
               </div>
             </button>
 
@@ -133,7 +133,7 @@ export default function PerfilPage() {
               <EyeOff className="h-5 w-5" />
               <div className="text-left">
                 <div className="font-medium">Sem Anúncios</div>
-                <div className="text-sm text-gray-600">Experiência limpa e focada</div>
+                <div className="text-sm font-semibold text-gray-700">Experiência limpa e focada</div>
               </div>
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function PerfilPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Notificações Push</div>
-                <div className="text-sm text-gray-600">Lembretes diários</div>
+                <div className="text-sm font-semibold text-gray-700">Lembretes diários</div>
               </div>
               <input type="checkbox" className="toggle" />
             </div>
@@ -153,7 +153,7 @@ export default function PerfilPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Tema Escuro</div>
-                <div className="text-sm text-gray-600">Modo noturno</div>
+                <div className="text-sm font-semibold text-gray-700">Modo noturno</div>
               </div>
               <input type="checkbox" className="toggle" />
             </div>

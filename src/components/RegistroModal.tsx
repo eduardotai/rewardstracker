@@ -90,7 +90,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
+            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded-full transition-colors"
           >
             <X size={24} />
           </button>

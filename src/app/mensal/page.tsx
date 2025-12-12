@@ -113,7 +113,7 @@ export default function MensalPage() {
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="grid grid-cols-7 gap-2 mb-4">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-            <div key={day} className="text-center font-medium text-gray-600 py-2">
+            <div key={day} className="text-center font-bold text-gray-900 py-2">
               {day}
             </div>
           ))}

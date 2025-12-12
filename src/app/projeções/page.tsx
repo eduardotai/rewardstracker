@@ -41,50 +41,50 @@ export default function ProjecoesPage() {
           <div className="flex items-center">
             <Calendar className="h-8 w-8 text-xbox-green mr-3" />
             <div>
-              <p className="text-sm text-gray-600">Dias para 12k pts</p>
+              <p className="text-sm font-semibold text-gray-700">Dias para 12k pts</p>
               <p className="text-2xl font-bold">{daysTo12k} dias</p>
-              <p className="text-xs text-gray-500">Meta mensal</p>
+              <p className="text-sm font-semibold text-gray-700">Meta mensal</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center">
-            <Target className="h-8 w-8 text-green-500 mr-3" />
+            <Target className="h-8 w-8 text-xbox-blue mr-3" />
             <div>
-              <p className="text-sm text-gray-600">Dias para R$50</p>
+              <p className="text-sm font-semibold text-gray-700">Dias para R$50</p>
               <p className="text-2xl font-bold">{daysTo50Brl} dias</p>
-              <p className="text-xs text-gray-500">Próximo resgate</p>
+              <p className="text-sm font-semibold text-gray-700">Próximo resgate</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center">
-            <TrendingUp className="h-8 w-8 text-purple-500 mr-3" />
+            <TrendingUp className="h-8 w-8 text-xbox-green mr-3" />
             <div>
-              <p className="text-sm text-gray-600">ROI Premium</p>
+              <p className="text-sm font-semibold text-gray-700">ROI Premium</p>
               <p className="text-2xl font-bold">{roi.toFixed(1)}x</p>
-              <p className="text-xs text-gray-500">Retorno mensal</p>
+              <p className="text-sm font-semibold text-gray-700">Retorno mensal</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center">
-            <Award className="h-8 w-8 text-yellow-500 mr-3" />
+            <Award className="h-8 w-8 text-xbox-yellow mr-3" />
             <div>
-              <p className="text-sm text-gray-600">Próximo Level</p>
+              <p className="text-sm font-semibold text-gray-700">Próximo Level</p>
               <p className="text-2xl font-bold">Essential</p>
-              <p className="text-xs text-gray-500">Faltam 3500 pts</p>
+              <p className="text-sm font-semibold text-gray-700">Faltam 3500 pts</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 className="text-xl font-semibold mb-4">Projeção de Pontos Futuros</h2>
-        <p className="text-sm text-gray-600 mb-4">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Projeção de Pontos Futuros</h2>
+        <p className="text-sm font-semibold text-gray-700 mb-4">
           Baseado na média diária de {dailyAvg} pontos
         </p>
         <ResponsiveContainer width="100%" height={400}>

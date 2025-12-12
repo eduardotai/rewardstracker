@@ -52,11 +52,11 @@ export default function ResgatesPage() {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Pts Usados</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valor BRL</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Custo Efetivo</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Data</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Item</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-gray-900 uppercase tracking-wider">Pts Usados</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-gray-900 uppercase tracking-wider">Valor BRL</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-gray-900 uppercase tracking-wider">Custo Efetivo</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">

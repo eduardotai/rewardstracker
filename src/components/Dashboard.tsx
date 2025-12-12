@@ -45,7 +45,7 @@ export default function Dashboard() {
               <Trophy className="h-8 w-8 text-xbox-green" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Saldo Atual</p>
+              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Saldo Atual</p>
               <p className="text-3xl font-bold text-gray-900">{totalSaldo.toLocaleString()} pts</p>
             </div>
           </div>
@@ -61,7 +61,7 @@ export default function Dashboard() {
               <Target className="h-8 w-8 text-xbox-blue" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Progresso Meta</p>
+              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Progresso Meta</p>
               <div className="w-full bg-gray-200 rounded-full h-3 mt-3 overflow-hidden">
                 <div
                   className="bg-gradient-to-r from-xbox-green to-xbox-blue h-3 rounded-full transition-all duration-500"
@@ -83,7 +83,7 @@ export default function Dashboard() {
               <Calendar className="h-8 w-8 text-xbox-yellow" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Streak</p>
+              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Streak</p>
               <p className="text-3xl font-bold text-gray-900">{streak} dias</p>
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function Dashboard() {
               <TrendingUp className="h-8 w-8 text-xbox-green" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Média Diária</p>
+              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Média Diária</p>
               <p className="text-3xl font-bold text-gray-900">{mediaDiaria} pts</p>
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function Dashboard() {
                   <tr className="hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4 text-gray-900">10 Dez 2024</td>
                     <td className="py-4 px-4 text-gray-900">Buscas</td>
-                    <td className="py-4 px-4 text-right font-semibold text-gray-600">50</td>
+                    <td className="py-4 px-4 text-right font-bold text-xbox-green">50</td>
                     <td className="py-4 px-4 text-center">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                         ✗ Pendente
