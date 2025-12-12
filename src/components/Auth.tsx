@@ -6,6 +6,7 @@ import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { supabase } from '@/lib/supabase'
 import { Gift, UserX } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 const GUEST_STORAGE_KEY = 'rewards_tracker_guest_mode'
 const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
@@ -23,12 +24,21 @@ const defaultGuestData = {
 
 export default function AuthComponent() {
   const router = useRouter()
+  const { user } = useAuth()
   const [redirectTo, setRedirectTo] = useState('')
 
   useEffect(() => {
     setRedirectTo(`${window.location.origin}/auth/callback`)
     console.log('Auth Component: Mounted, redirectTo set to', `${window.location.origin}/auth/callback`)
   }, [])
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      console.log('Auth Component: User detected, redirecting to dashboard')
+      router.push('/')
+    }
+  }, [user, router])
 
   const handleGuestMode = () => {
     console.log('Auth Component: Entering as guest')
