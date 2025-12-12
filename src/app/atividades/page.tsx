@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Check, Target, Gift, Menu, X as CloseIcon, Home, Activity, BarChart3, PiggyBank, User, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Bell, BellOff, Info, Gamepad2, Monitor, Smartphone } from 'lucide-react'
+import {
+  Check, Target, Gift, Menu, X as CloseIcon, Home, Activity, BarChart3, PiggyBank, User,
+  Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Bell, BellOff, Info,
+  Gamepad2, Smartphone, Cpu, Zap, Trophy, Flame
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ACTIVITIES_LIST, REWARDS_LIMITS } from '@/lib/rewards-constants'
 import { fetchMonthlyStatus, DailyRecord } from '@/hooks/useData'
 import RegistroModal from '@/components/RegistroModal'
 import toast from 'react-hot-toast'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 const DAILY_CHECKLIST_KEY = 'rewards_daily_checklist'
@@ -16,7 +20,7 @@ const REMINDER_KEY = 'rewards_reminder_enabled'
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: false },
-  { icon: Activity, label: 'Atividades', href: '/atividades', active: true },
+  { icon: Activity, label: 'Mission Control', href: '/atividades', active: true }, // Renamed
   { icon: BarChart3, label: 'Gráficos', href: '/graficos', active: false },
   { icon: PiggyBank, label: 'Resgates', href: '/resgates', active: false },
   { icon: User, label: 'Perfil', href: '/perfil', active: false },
@@ -28,10 +32,9 @@ export default function AtividadesPage() {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({})
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // Calendar State
+  // Calendar/Streak State
   const [currentDate, setCurrentDate] = useState(new Date())
   const [monthlyStatus, setMonthlyStatus] = useState<Pick<DailyRecord, 'data' | 'meta_batida' | 'total_pts'>[]>([])
-  const [isLoadingCalendar, setIsLoadingCalendar] = useState(false)
 
   // Reminder State
   const [reminderEnabled, setReminderEnabled] = useState(false)
@@ -60,8 +63,6 @@ export default function AtividadesPage() {
     if (savedReminder === 'true') {
       if (Notification.permission === 'granted') {
         setReminderEnabled(true)
-      } else {
-        localStorage.setItem(REMINDER_KEY, 'false')
       }
     }
   }, [])
@@ -70,10 +71,10 @@ export default function AtividadesPage() {
   useEffect(() => {
     async function loadMonth() {
       if (!user) return
-      setIsLoadingCalendar(true)
+      // Fetch current and previous month to ensure we have streak data
+      // For simplicity in this view, just current month + basic streak check
       const { data } = await fetchMonthlyStatus(user.id, currentDate.getMonth(), currentDate.getFullYear())
       if (data) setMonthlyStatus(data)
-      setIsLoadingCalendar(false)
     }
     loadMonth()
   }, [user, currentDate])
@@ -93,12 +94,12 @@ export default function AtividadesPage() {
     if (reminderEnabled) {
       setReminderEnabled(false)
       localStorage.setItem(REMINDER_KEY, 'false')
-      toast.success('Lembretes desativados')
+      toast.success('Protocolo de lembrete desativado.')
       return
     }
 
     if (!('Notification' in window)) {
-      toast.error('Este navegador não suporta notificações')
+      toast.error('Sistema de notificação indisponível.')
       return
     }
 
@@ -106,33 +107,17 @@ export default function AtividadesPage() {
     if (permission === 'granted') {
       setReminderEnabled(true)
       localStorage.setItem(REMINDER_KEY, 'true')
-      new Notification('Rewards Tracker', {
-        body: 'Notificações ativadas! Lembraremos você de fazer suas atividades.',
-        icon: '/favicon.ico' // Assuming favicon exists
+      new Notification('Mission Control', {
+        body: 'Rastreamento ativo. Vamos bater a meta hoje, Spartan?',
+        icon: '/favicon.ico'
       })
-      toast.success('Lembretes ativados!')
+      toast.success('Protocolo de lembrete ativado!')
     } else {
-      toast.error('Permissão de notificação negada')
+      toast.error('Permissão negada.')
     }
   }
 
-  // Calendar Helpers
-  const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(currentDate),
-    end: endOfMonth(currentDate)
-  })
-
-  const getDayStatus = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    const record = monthlyStatus.find(r => r.data.startsWith(dateStr))
-    if (!record) return null
-    return record
-  }
-
-  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1))
-  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1))
-
-  // Determine user limits & calc totals (Same logic as before)
+  // Calc Totals
   const userLevel = profile?.level || 2
   const limits = userLevel === 1 ? REWARDS_LIMITS.LEVEL_1 : REWARDS_LIMITS.LEVEL_2
 
@@ -158,16 +143,18 @@ export default function AtividadesPage() {
   const totals = calculateTotals()
   const grandTotal = totals.pc_busca + totals.mobile_busca + totals.xbox + totals.quiz
 
-  const handleConcluirDia = () => setIsModalOpen(true)
+  // Daily Goal (Estimated)
+  const DAILY_GOAL = 180 + (limits.PC_SEARCH + limits.MOBILE_SEARCH) // Approximate goal
+  const progressPercent = Math.min(100, Math.round((grandTotal / DAILY_GOAL) * 100))
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-[#0f1115] text-white font-sans selection:bg-[var(--xbox-green)] selection:text-black">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-        <div className="p-6 border-b border-[var(--border-subtle)]">
-          <h1 className="text-xl font-bold text-[var(--xbox-green)] flex items-center gap-2">
-            <Gift className="h-6 w-6" />
-            Rewards Tracker
+      <aside className="hidden lg:flex flex-col w-64 border-r border-white/5 bg-[#1a1c20]">
+        <div className="p-6 border-b border-white/5">
+          <h1 className="text-xl font-bold text-[var(--xbox-green)] flex items-center gap-2 font-mono tracking-tighter">
+            <Zap className="h-6 w-6" />
+            MISSION:CONTROL
           </h1>
         </div>
         <nav className="flex-1 p-4">
@@ -176,13 +163,12 @@ export default function AtividadesPage() {
               <li key={item.label}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
-                    ? 'bg-[var(--bg-tertiary)] text-white'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                  className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative group ${item.active
+                    ? 'bg-[var(--xbox-green)]/10 text-[var(--xbox-green)] border-l-2 border-[var(--xbox-green)]'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
                     }`}
                 >
-                  {item.active && <span className="xbox-nav-indicator" />}
-                  <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
+                  <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)] drop-shadow-[0_0_5px_rgba(16,124,16,0.5)]' : 'group-hover:scale-110 transition-transform'}`} />
                   {item.label}
                 </Link>
               </li>
@@ -191,227 +177,236 @@ export default function AtividadesPage() {
         </nav>
       </aside>
 
-      {/* Mobile Sidebar */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setIsSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)]">
-            <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between">
-              <h1 className="text-xl font-bold text-[var(--xbox-green)]">Rewards</h1>
-              <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-[var(--bg-tertiary)] rounded">
-                <CloseIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="p-4">
-              <ul className="space-y-1">
-                {navItems.map((item) => (
-                  <li key={item.label}>
-                    <Link href={item.href} className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium relative ${item.active ? 'bg-[var(--bg-tertiary)] text-white' : 'text-[var(--text-secondary)]'}`}>
-                      {item.active && <span className="xbox-nav-indicator" />}
-                      <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </aside>
-        </div>
-      )}
-
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-[var(--bg-primary)]">
-        <header className="lg:hidden sticky top-0 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-subtle)] p-4 flex items-center justify-between">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-[var(--bg-tertiary)] rounded">
+      <main className="flex-1 overflow-auto relative">
+        {/* Background Grid Effect */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(16,124,16,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,124,16,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-40 bg-[#0f1115]/80 backdrop-blur-md border-b border-white/5 p-4 flex items-center justify-between">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-white/5 rounded">
             <Menu className="h-6 w-6" />
           </button>
-          <h1 className="text-lg font-bold text-[var(--xbox-green)]">Atividades</h1>
+          <span className="font-mono text-[var(--xbox-green)] font-bold">MISSION:CONTROL</span>
           <div className="w-10" />
         </header>
 
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto">
-          <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
-                <CalendarIcon className="h-8 w-8 text-[var(--xbox-green)]" />
-                Atividades Diárias
-              </h2>
-              <p className="text-[var(--text-secondary)]">Organize sua rotina e acompanhe seu progresso</p>
+        <div className="p-4 lg:p-8 max-w-7xl mx-auto relative z-10">
+
+          {/* Top Bar: Streak & Controls */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+
+            {/* Streak Strip */}
+            <div className="flex items-center gap-2 bg-black/40 p-2 rounded-full border border-white/10 backdrop-blur-sm">
+              {Array.from({ length: 7 }).map((_, i) => {
+                const d = subDays(new Date(), 6 - i)
+                const dateStr = format(d, 'yyyy-MM-dd')
+                const status = monthlyStatus.find(r => r.data.startsWith(dateStr))
+                const isT = isToday(d)
+
+                return (
+                  <div key={i} className="flex flex-col items-center gap-1 group relative">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all cursor-default
+                       ${isT ? 'border-white text-white shadow-[0_0_10px_rgba(255,255,255,0.3)] scale-110' : 'border-transparent text-gray-500'}
+                       ${status?.meta_batida ? '!bg-[var(--xbox-green)] !border-[var(--xbox-green)] !text-black' : ''}
+                       ${!status?.meta_batida && !isT ? 'bg-white/5' : ''}
+                     `}>
+                      {format(d, 'd')}
+                    </div>
+                    {status?.meta_batida && <div className="w-1 h-1 rounded-full bg-[var(--xbox-green)] shadow-[0_0_5px_var(--xbox-green)]" />}
+                  </div>
+                )
+              })}
             </div>
+
             <div className="flex items-center gap-4">
-              {/* Reminders Toggle */}
               <button
                 onClick={toggleReminder}
-                className={`flex items-center gap-2 px-4 py-2 rounded border transition-colors ${reminderEnabled
-                  ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)] text-[var(--xbox-green)]'
-                  : 'bg-[var(--bg-tertiary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white'
+                className={`p-3 rounded-full border transition-all hover:scale-105 active:scale-95 ${reminderEnabled
+                    ? 'bg-[var(--xbox-green)] text-black border-[var(--xbox-green)] shadow-[0_0_15px_rgba(16,124,16,0.4)]'
+                    : 'bg-black/40 text-gray-400 border-white/10 hover:text-white'
                   }`}
               >
-                {reminderEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-                <span className="text-sm font-medium">{reminderEnabled ? 'Lembretes Ativos' : 'Ativar Lembretes'}</span>
+                {reminderEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
               </button>
-
-              <div className="text-right pl-4 border-l border-[var(--border-subtle)]">
-                <p className="text-sm text-[var(--text-muted)]">Estimativa Hoje</p>
-                <p className="text-3xl font-bold text-[var(--xbox-green)]">{grandTotal} pts</p>
-              </div>
             </div>
-          </header>
+          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Calendar & History */}
-            <div className="space-y-6">
-              <div className="xbox-card p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-white">Histórico</h3>
-                  <div className="flex items-center gap-2">
-                    <button onClick={prevMonth} className="p-1 hover:bg-[var(--bg-elevated)] rounded"><ChevronLeft className="h-4 w-4" /></button>
-                    <span className="text-sm font-medium capitalize">{format(currentDate, 'MMMM yyyy', { locale: ptBR })}</span>
-                    <button onClick={nextMonth} className="p-1 hover:bg-[var(--bg-elevated)] rounded"><ChevronRight className="h-4 w-4" /></button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                  {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-                    <div key={i} className="text-xs text-[var(--text-muted)] font-bold">{d}</div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-7 gap-1">
-                  {/* Empty spots for start of month */}
-                  {Array.from({ length: startOfMonth(currentDate).getDay() }).map((_, i) => (
-                    <div key={`empty-${i}`} />
-                  ))}
-
-                  {daysInMonth.map(day => {
-                    const status = getDayStatus(day)
-                    const isTodayDate = isToday(day)
-
-                    let bgClass = 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
-                    if (status?.meta_batida) bgClass = 'bg-[var(--xbox-green)] text-white shadow-[0_0_10px_rgba(16,124,16,0.3)]'
-                    else if (status) bgClass = 'bg-[var(--warning)]/20 text-[var(--warning)] border border-[var(--warning)]/30'
-                    if (isTodayDate) bgClass += ' ring-2 ring-white'
-
-                    return (
-                      <div
-                        key={day.toISOString()}
-                        className={`aspect-square rounded flex items-center justify-center text-xs font-medium cursor-default transition-all relative group ${bgClass}`}
-                      >
-                        {format(day, 'd')}
-                        {status && (
-                          <div className="absolute opacity-0 group-hover:opacity-100 bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none">
-                            {status.total_pts} pts
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div className="mt-4 flex gap-4 text-xs text-[var(--text-muted)] justify-center">
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-[var(--xbox-green)]" /> Meta Batida</div>
-                  <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-[var(--warning)]/50" /> Parcial</div>
-                </div>
+          {/* Hero Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center mb-16">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--xbox-green)]/10 text-[var(--xbox-green)] text-xs font-mono border border-[var(--xbox-green)]/20">
+                <span className="w-2 h-2 rounded-full bg-[var(--xbox-green)] animate-pulse" />
+                SYSTEM: ONLINE
               </div>
-
-              <div className="xbox-card p-5 bg-[var(--bg-elevated)]/50 border-dashed">
-                <h4 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)] mb-2">
-                  <Info className="h-4 w-4" /> Dica Rápida
-                </h4>
-                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                  Marque as atividades ao lado conforme for completando. Ao final, clique em
-                  <span className="text-white font-medium"> "Concluir Dia"</span> para salvar tudo de uma vez.
-                </p>
-              </div>
+              <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500 uppercase">
+                Daily Operations
+              </h1>
+              <p className="text-gray-400 max-w-lg text-lg">
+                Execute tarefas de busca, jogos e quizzes para maximizar seus pontos de recompensa.
+              </p>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                disabled={grandTotal === 0}
+                className="mt-4 group relative px-8 py-4 bg-[var(--xbox-green)] text-black font-bold uppercase tracking-widest clip-path-polygon hover:bg-[#159115] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%)' }}
+              >
+                Finalizar Operação
+                <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              </button>
             </div>
 
-            {/* Right Column: Checklist */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Buscas */}
-              <div className="xbox-card p-5">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Search className="h-5 w-5 text-[var(--xbox-green)]" />
-                  Buscas diárias
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {searchActivities.map(act => {
-                    const limit = act.id === 'pc_search' ? limits.PC_SEARCH : limits.MOBILE_SEARCH
-                    if (limit === 0) return null
-                    return (
-                      <div key={act.id}
-                        onClick={() => toggleItem(act.id)}
-                        className={`flex items-center justify-between p-3 rounded cursor-pointer transition-all border select-none ${checkedItems[act.id] ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]' : 'bg-[var(--bg-tertiary)] border-transparent hover:border-[var(--border-subtle)]'}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${checkedItems[act.id] ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)]' : 'border-[var(--text-muted)]'}`}>
-                            {checkedItems[act.id] && <Check className="h-4 w-4 text-white" />}
-                          </div>
-                          <div>
-                            <p className="text-white font-medium text-sm">{act.label}</p>
-                            <p className="text-xs text-[var(--text-secondary)]">Máx. {limit} pts</p>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+            {/* Daily Ring Hero */}
+            <div className="relative flex items-center justify-center">
+              {/* Outer Glow */}
+              <div className="absolute inset-0 bg-[var(--xbox-green)]/20 blur-[60px] rounded-full" />
 
-              {/* Xbox & Game Pass */}
-              <div className="xbox-card p-5">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Gamepad2 className="h-5 w-5 text-[var(--xbox-green)]" />
-                  Xbox & Game Pass
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {[...xboxActivities, ...gamePassActivities].map(act => (
-                    <div key={act.id}
-                      onClick={() => toggleItem(act.id)}
-                      className={`flex items-center justify-between p-3 rounded cursor-pointer transition-all border select-none ${checkedItems[act.id] ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]' : 'bg-[var(--bg-tertiary)] border-transparent hover:border-[var(--border-subtle)]'}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${checkedItems[act.id] ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)]' : 'border-[var(--text-muted)]'}`}>
-                          {checkedItems[act.id] && <Check className="h-4 w-4 text-white" />}
-                        </div>
-                        <p className="text-white font-medium text-sm">{act.label}</p>
-                      </div>
-                      <span className="text-[var(--xbox-green)] font-bold text-sm">+{act.points}</span>
-                    </div>
-                  ))}
+              {/* SVG Ring */}
+              <div className="relative w-64 h-64">
+                <svg className="w-full h-full -rotate-90">
+                  <circle cx="128" cy="128" r="120" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
+                  <circle
+                    cx="128" cy="128" r="120"
+                    stroke="var(--xbox-green)"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray="754"
+                    strokeDashoffset={754 - (754 * progressPercent) / 100}
+                    strokeLinecap="round"
+                    className="transition-[stroke-dashoffset] duration-1000 ease-out shadow-[0_0_20px_var(--xbox-green)]"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-5xl font-black text-white tracking-tight">{grandTotal}</span>
+                  <span className="text-sm font-mono text-[var(--xbox-green)] uppercase">Pontos Hoje</span>
                 </div>
-              </div>
-
-              {/* Diárias & Outros */}
-              <div className="xbox-card p-5">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Target className="h-5 w-5 text-[var(--xbox-green)]" />
-                  Diárias & Outros
-                </h3>
-                <div className="space-y-2">
-                  {dailyActivities.map(act => (
-                    <div key={act.id}
-                      onClick={() => toggleItem(act.id)}
-                      className={`flex items-center justify-between p-3 rounded cursor-pointer transition-all border select-none ${checkedItems[act.id] ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]' : 'bg-[var(--bg-tertiary)] border-transparent hover:border-[var(--border-subtle)]'}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${checkedItems[act.id] ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)]' : 'border-[var(--text-muted)]'}`}>
-                          {checkedItems[act.id] && <Check className="h-4 w-4 text-white" />}
-                        </div>
-                        <p className="text-white font-medium text-sm">{act.label}</p>
-                      </div>
-                      <span className="text-[var(--xbox-green)] font-bold text-sm">+{act.points}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="sticky bottom-4 flex justify-end">
-                <button
-                  onClick={handleConcluirDia}
-                  disabled={grandTotal === 0}
-                  className="xbox-btn xbox-btn-primary px-8 py-4 text-lg shadow-2xl animate-pulse-glow disabled:opacity-50 disabled:animate-none w-full md:w-auto">
-                  Concluir Dia ({grandTotal} pts)
-                </button>
               </div>
             </div>
           </div>
+
+          {/* Mission Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Card 1: Network Scan (Buscas) */}
+            <div className="group relative bg-[#1a1c20] border border-white/5 p-6 overflow-hidden rounded-xl hover:border-[var(--xbox-green)]/50 transition-colors">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Search className="w-32 h-32 text-[var(--xbox-green)]" />
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
+                  <Cpu className="text-[var(--xbox-green)]" />
+                  NETWORK SCAN
+                </h3>
+
+                <div className="space-y-4">
+                  {searchActivities.map(act => {
+                    const limit = act.id === 'pc_search' ? limits.PC_SEARCH : limits.MOBILE_SEARCH
+                    if (limit === 0) return null
+                    const isChecked = checkedItems[act.id]
+
+                    return (
+                      <div
+                        key={act.id}
+                        onClick={() => toggleItem(act.id)}
+                        className={`
+                                cursor-pointer flex items-center justify-between p-4 bg-black/40 border-l-4 transition-all
+                                ${isChecked ? 'border-l-[var(--xbox-green)] bg-[var(--xbox-green)]/5' : 'border-l-gray-700 hover:bg-white/5'}
+                              `}
+                      >
+                        <div>
+                          <p className="font-mono text-sm uppercase tracking-wide text-gray-300">{act.label}</p>
+                          <p className="text-xs text-gray-500">Max: {limit}</p>
+                        </div>
+                        <div className={`w-6 h-6 border flex items-center justify-center transition-colors ${isChecked ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)] text-black' : 'border-gray-600'}`}>
+                          {isChecked && <Check className="w-4 h-4" />}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Field Ops (Mobile/Xbox) */}
+            <div className="group relative bg-[#1a1c20] border border-white/5 p-6 overflow-hidden rounded-xl hover:border-[var(--xbox-green)]/50 transition-colors">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Gamepad2 className="w-32 h-32 text-[var(--xbox-green)]" />
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
+                  <Gamepad2 className="text-[var(--xbox-green)]" />
+                  FIELD OPS
+                </h3>
+
+                <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+                  {[...xboxActivities, ...gamePassActivities].map(act => {
+                    const isChecked = checkedItems[act.id]
+                    return (
+                      <div
+                        key={act.id}
+                        onClick={() => toggleItem(act.id)}
+                        className={`
+                                cursor-pointer flex items-center justify-between p-3 rounded bg-black/40 border border-transparent transition-all
+                                ${isChecked ? 'border-[var(--xbox-green)]/30 bg-[var(--xbox-green)]/5 shadow-[inset_0_0_10px_rgba(16,124,16,0.1)]' : 'hover:border-white/10'}
+                              `}
+                      >
+                        <span className="text-sm font-medium text-gray-300">{act.label}</span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${isChecked ? 'bg-[var(--xbox-green)] text-black' : 'bg-white/10 text-gray-400'}`}>
+                          +{act.points}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Bonus Objectives */}
+            <div className="group relative bg-[#1a1c20] border border-white/5 p-6 overflow-hidden rounded-xl hover:border-[var(--xbox-green)]/50 transition-colors">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Target className="w-32 h-32 text-[var(--xbox-green)]" />
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
+                  <Trophy className="text-[var(--xbox-green)]" />
+                  BONUS OBJ
+                </h3>
+
+                <div className="space-y-3">
+                  {dailyActivities.map(act => {
+                    const isChecked = checkedItems[act.id]
+                    return (
+                      <div
+                        key={act.id}
+                        onClick={() => toggleItem(act.id)}
+                        className={`
+                                cursor-pointer flex items-center justify-between p-3 rounded bg-black/40 border border-transparent transition-all
+                                ${isChecked ? 'border-[var(--xbox-green)]/30 bg-[var(--xbox-green)]/5' : 'hover:border-white/10'}
+                              `}
+                      >
+                        <span className="text-sm font-medium text-gray-300">{act.label}</span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${isChecked ? 'bg-[var(--xbox-green)] text-black' : 'bg-white/10 text-gray-400'}`}>
+                          +{act.points}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="mt-6 p-4 bg-gradient-to-br from-[var(--xbox-green)]/10 to-transparent border border-[var(--xbox-green)]/20 rounded-lg">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Flame className="text-[var(--xbox-green)] w-5 h-5" />
+                    <span className="font-bold text-sm uppercase">Streak Status</span>
+                  </div>
+                  <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--xbox-green)]" style={{ width: '85%' }} />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Mantenha a consistência para bônus máximos.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </main>
 
@@ -424,14 +419,14 @@ export default function AtividadesPage() {
           xbox: totals.xbox,
           quiz: totals.quiz,
           atividade: 'Rotina Diária',
-          meta_batida: grandTotal > 150 // Auto-guess
+          meta_batida: grandTotal > 150
         }}
         isGuest={isGuest}
         onSave={() => {
-          // Refresh calendar if needed, but it uses strict fetch so next load is fine.
-          // Auto-refresh logic for calendar could be added here if critical.
-          toast.success('Dia registrado! Calendário atualizado.')
-          // Reload logic for calendar
+          toast.success('Missão Cumprida! Dados registrados.', {
+            icon: '🎮',
+            style: { background: '#1a1c20', color: '#fff', border: '1px solid #107C10' }
+          })
           if (user) fetchMonthlyStatus(user.id, currentDate.getMonth(), currentDate.getFullYear()).then(({ data }) => setMonthlyStatus(data || []))
         }}
       />
