@@ -1,19 +1,29 @@
 import { supabase } from '@/lib/supabase'
 
 // Helper to timeout promises
-const withTimeout = async <T>(promise: PromiseLike<T>, ms: number = 15000): Promise<T> => {
-    let timeoutId: NodeJS.Timeout
-    const timeoutPromise = new Promise<T>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms)
-    })
-    try {
-        const result = await Promise.race([promise, timeoutPromise])
-        clearTimeout(timeoutId!)
-        return result
-    } catch (error) {
-        clearTimeout(timeoutId!)
-        throw error
+const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 15000, retries: number = 3): Promise<T> => {
+    for (let i = 0; i < retries; i++) {
+        let timeoutId: NodeJS.Timeout
+        try {
+            const promise = promiseFactory()
+            const timeoutPromise = new Promise<T>((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms)
+            })
+            const result = await Promise.race([promise, timeoutPromise])
+            clearTimeout(timeoutId!)
+            return result
+        } catch (error) {
+            clearTimeout(timeoutId!)
+            const isLastAttempt = i === retries - 1
+            if (isLastAttempt) throw error
+
+            // Wait before retrying (exponential backoff: 1s, 2s, 4s...)
+            const delay = 1000 * Math.pow(2, i)
+            console.log(`Attempt ${i + 1} failed, retrying in ${delay}ms...`)
+            await new Promise(resolve => setTimeout(resolve, delay))
+        }
     }
+    throw new Error('All retries failed')
 }
 
 export interface DailyRecord {
@@ -54,7 +64,7 @@ export async function fetchDailyRecords(userId: string, limit?: number) {
         query = query.limit(limit)
     }
 
-    const { data, error } = await withTimeout(query)
+    const { data, error } = await withTimeout(() => query)
     return { data: data as DailyRecord[] | null, error }
 }
 
@@ -63,7 +73,7 @@ export async function fetchWeeklyRecords(userId: string) {
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    const { data, error } = await withTimeout(supabase
+    const { data, error } = await withTimeout(() => supabase
         .from('registros_diarios')
         .select('*')
         .eq('user_id', userId)
@@ -76,7 +86,7 @@ export async function fetchWeeklyRecords(userId: string) {
 
 // Get user stats
 export async function fetchUserStats(userId: string) {
-    const { data: records, error } = await withTimeout(supabase
+    const { data: records, error } = await withTimeout(() => supabase
         .from('registros_diarios')
         .select('total_pts, meta_batida, data')
         .eq('user_id', userId)
@@ -117,7 +127,7 @@ export async function fetchUserStats(userId: string) {
 
 // Fetch resgates
 export async function fetchResgates(userId: string) {
-    const { data, error } = await withTimeout(supabase
+    const { data, error } = await withTimeout(() => supabase
         .from('resgates')
         .select('*')
         .eq('user_id', userId)
@@ -166,11 +176,11 @@ export async function fetchLeaderboardData(currentUserId?: string) {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
         const [profilesResult, recordsResult] = await Promise.all([
-            withTimeout(supabase
+            withTimeout(() => supabase
                 .from('profiles')
                 .select('id, display_name, tier, email')
             ),
-            withTimeout(supabase
+            withTimeout(() => supabase
                 .from('registros_diarios')
                 .select('user_id, total_pts')
                 .gte('data', thirtyDaysAgo.toISOString().split('T')[0])
