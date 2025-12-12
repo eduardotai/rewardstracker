@@ -27,6 +27,7 @@ export default function AtividadesPage() {
   // Group activities
   const searchActivities = ACTIVITIES_LIST.filter(a => a.type === 'search')
   const xboxActivities = ACTIVITIES_LIST.filter(a => a.type === 'xbox')
+  const gamePassActivities = ACTIVITIES_LIST.filter(a => a.type === 'gamepass')
   const dailyActivities = ACTIVITIES_LIST.filter(a => a.type === 'daily' || a.type === 'other')
 
   // Load daily state
@@ -73,7 +74,7 @@ export default function AtividadesPage() {
         if (act.type === 'search') {
           if (act.id === 'pc_search') pc += points
           else mobile += points
-        } else if (act.type === 'xbox') {
+        } else if (act.type === 'xbox' || act.type === 'gamepass') {
           xbox += points
         } else if (act.type === 'daily') {
           quiz += points // Rough mapping
@@ -237,6 +238,31 @@ export default function AtividadesPage() {
                 ))}
               </div>
             </div>
+
+            {/* Game Pass Quests */}
+            {gamePassActivities.length > 0 && (
+              <div className="xbox-card p-5">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <Gamepad2 className="h-5 w-5 text-[var(--xbox-green)]" />
+                  Quests Game Pass
+                </h3>
+                <div className="space-y-3">
+                  {gamePassActivities.map(act => (
+                    <div key={act.id}
+                      onClick={() => toggleItem(act.id)}
+                      className={`flex items-center justify-between p-3 rounded cursor-pointer transition-all border ${checkedItems[act.id] ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]' : 'bg-[var(--bg-tertiary)] border-transparent hover:border-[var(--border-subtle)]'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${checkedItems[act.id] ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)]' : 'border-[var(--text-muted)]'}`}>
+                          {checkedItems[act.id] && <Check className="h-4 w-4 text-white" />}
+                        </div>
+                        <p className="text-white font-medium">{act.label}</p>
+                      </div>
+                      <span className="text-[var(--xbox-green)] font-bold">+{act.points}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Diárias & Outros */}
             <div className="xbox-card p-5">

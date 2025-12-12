@@ -12,8 +12,8 @@ const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
 const registroSchema = z.object({
   data: z.string().min(1, 'Data é obrigatória'),
   atividade: z.string().min(1, 'Selecione uma atividade'),
-  pc_busca: z.number().min(0),
-  mobile_busca: z.number().min(0),
+  pc_busca: z.number().min(0).max(1000, 'Valor muito alto'), // Practical cap
+  mobile_busca: z.number().min(0).max(1000),
   quiz: z.number().min(0),
   xbox: z.number().min(0),
   meta_batida: z.boolean(),
@@ -162,7 +162,7 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
             <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
               <Plus className="h-5 w-5 text-[var(--xbox-green)]" />
             </div>
-            Registro Diário
+            Registro de Pontuação
             {isGuest && <span className="text-xs text-[var(--warning)]">(local)</span>}
           </h2>
           <button
@@ -227,7 +227,14 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
               <div>
                 <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
                   <Monitor className="h-4 w-4" />
-                  PC Busca
+                  Busca PC
+                  <button
+                    type="button"
+                    onClick={() => setValue('pc_busca', 90)}
+                    className="ml-auto text-[10px] bg-[var(--bg-elevated)] px-1.5 py-0.5 rounded text-[var(--xbox-green)] hover:bg-[var(--xbox-green)] hover:text-white transition-colors"
+                  >
+                    Max (90)
+                  </button>
                 </label>
                 <input
                   type="number"
@@ -240,7 +247,14 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
               <div>
                 <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
                   <Smartphone className="h-4 w-4" />
-                  Mobile Busca
+                  Busca Mobile
+                  <button
+                    type="button"
+                    onClick={() => setValue('mobile_busca', 60)}
+                    className="ml-auto text-[10px] bg-[var(--bg-elevated)] px-1.5 py-0.5 rounded text-[var(--xbox-green)] hover:bg-[var(--xbox-green)] hover:text-white transition-colors"
+                  >
+                    Max (60)
+                  </button>
                 </label>
                 <input
                   type="number"
@@ -251,29 +265,29 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
                 />
               </div>
               <div>
-                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2" title="Inclui Conjunto Diário, Notícias Start, etc.">
                   <Brain className="h-4 w-4" />
-                  Quiz
+                  Ativ. Web
                 </label>
                 <input
                   type="number"
                   {...register('quiz', { valueAsNumber: true })}
                   className="xbox-input"
                   min="0"
-                  placeholder="0"
+                  placeholder="Quiz/News"
                 />
               </div>
               <div>
-                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2" title="Inclui Jewel, PC Game, Console, Game Pass Quests">
                   <Gamepad2 className="h-4 w-4" />
-                  Xbox
+                  Xbox & GP
                 </label>
                 <input
                   type="number"
                   {...register('xbox', { valueAsNumber: true })}
                   className="xbox-input"
                   min="0"
-                  placeholder="0"
+                  placeholder="App/Quests"
                 />
               </div>
             </div>

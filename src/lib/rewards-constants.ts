@@ -27,10 +27,15 @@ export const ACTIVITIES_LIST = [
     { id: 'pc_search', label: 'Buscas no PC', points: 90, type: 'search', limit_l1: 33, limit_l2: 90 },
     { id: 'mobile_search', label: 'Buscas Mobile', points: 60, type: 'search', limit_l1: 0, limit_l2: 60 },
     { id: 'daily_set', label: 'Conjunto Diário', points: 30, type: 'daily' },
-    { id: 'xbox_app_checkin', label: 'Xbox App Check-in', points: 5, type: 'xbox' },
-    { id: 'play_pc_game', label: 'Jogar no PC', points: 10, type: 'xbox' },
-    { id: 'jewel', label: 'Jewel (Xbox App)', points: 13, type: 'xbox' },
+    { id: 'xbox_app_checkin', label: 'Usar Aplicativo Xbox', points: 2, type: 'xbox' },
+    { id: 'play_pc_game', label: 'Jogar um jogo para PC', points: 5, type: 'xbox' },
+    { id: 'play_console_game', label: 'Jogar um jogo no console', points: 5, type: 'xbox' },
+    { id: 'jewel', label: 'Jogar Jewel', points: 5, type: 'xbox' },
     { id: 'read_news', label: 'Ler Notícias (Start)', points: 30, type: 'other' },
+    // Game Pass Quests
+    { id: 'gp_weekly_streak', label: 'Quest Semanal (5 Dias)', points: 40, type: 'gamepass' },
+    { id: 'gp_monthly_4', label: 'Quest Mensal (4 Jogos)', points: 40, type: 'gamepass' },
+    { id: 'gp_monthly_8', label: 'Quest Mensal (8 Jogos)', points: 280, type: 'gamepass' },
 ] as const
 
 export type ActivityId = typeof ACTIVITIES_LIST[number]['id']

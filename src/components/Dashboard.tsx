@@ -678,7 +678,7 @@ export default function Dashboard() {
               data-tooltip-content="Registre suas atividades diárias"
             >
               <Plus className="h-5 w-5" />
-              Log Hoje
+              Registrar Dia
             </button>
           </div>
         </div>
