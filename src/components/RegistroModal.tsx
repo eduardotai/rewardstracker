@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { X, Plus, Monitor, Smartphone, Brain, Gamepad2, Target } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
+
 const registroSchema = z.object({
   data: z.string().min(1, 'Data é obrigatória'),
   atividade: z.string().min(1, 'Selecione uma atividade'),
@@ -23,12 +25,13 @@ type RegistroForm = z.infer<typeof registroSchema>
 interface RegistroModalProps {
   isOpen: boolean
   onClose: () => void
+  isGuest?: boolean
 }
 
-export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
-  const [metaDiaria, setMetaDiaria] = useState(150) // Meta configurável pelo usuário
+export default function RegistroModal({ isOpen, onClose, isGuest = false }: RegistroModalProps) {
+  const [metaDiaria, setMetaDiaria] = useState(150)
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<RegistroForm>({
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
     defaultValues: {
       data: new Date().toISOString().split('T')[0],
@@ -53,16 +56,49 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
   const totalPts = calculateTotal()
   const metaAlcancada = totalPts >= metaDiaria
 
-  // Atualiza automaticamente o checkbox quando a meta é atingida
+  // Auto-update meta checkbox
   useEffect(() => {
     setValue('meta_batida', metaAlcancada)
   }, [metaAlcancada, setValue])
 
+  // Save to localStorage for guest mode
+  const saveGuestRecord = (data: RegistroForm) => {
+    const savedData = localStorage.getItem(GUEST_DATA_KEY)
+    const guestData = savedData ? JSON.parse(savedData) : { registros: [], profile: { display_name: 'Visitante', tier: 'Sem', meta_mensal: 12000 } }
+
+    const newRecord = {
+      id: Date.now(),
+      data: data.data,
+      atividade: data.atividade,
+      pc_busca: data.pc_busca,
+      mobile_busca: data.mobile_busca,
+      quiz: data.quiz,
+      xbox: data.xbox,
+      total_pts: totalPts,
+      meta_batida: data.meta_batida,
+      notas: data.notas || '',
+      created_at: new Date().toISOString(),
+    }
+
+    guestData.registros.unshift(newRecord)
+    localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(guestData))
+    return true
+  }
+
   const onSubmit = async (data: RegistroForm) => {
     try {
+      // Guest mode: save to localStorage
+      if (isGuest) {
+        saveGuestRecord(data)
+        toast.success('Registro salvo localmente!')
+        reset()
+        onClose()
+        return
+      }
+
+      // Logged in user: save to Supabase
       const { supabase } = await import('@/lib/supabase')
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error('Você precisa estar logado para registrar atividades.')
@@ -92,6 +128,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
         return
       }
       toast.success('Registro salvo com sucesso!')
+      reset()
       onClose()
     } catch (err) {
       console.error('Error saving registro:', err)
@@ -111,6 +148,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
               <Plus className="h-5 w-5 text-[var(--xbox-green)]" />
             </div>
             Registro Diário
+            {isGuest && <span className="text-xs text-[var(--warning)]">(local)</span>}
           </h2>
           <button
             onClick={onClose}
@@ -226,7 +264,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
             </div>
           </div>
 
-          {/* Meta Checkbox - Agora automático */}
+          {/* Meta Checkbox */}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"

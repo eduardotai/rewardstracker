@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { Trophy, TrendingUp, Calendar, Target, Plus, Gift, BarChart3, Menu, X as CloseIcon, Home, Activity, PiggyBank, User, LogOut } from 'lucide-react'
 import { Tooltip as ReactTooltip } from 'react-tooltip'
@@ -10,6 +10,8 @@ import RegistroModal from './RegistroModal'
 import Badges from './Badges'
 import Leaderboard from './Leaderboard'
 
+const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
+
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: true },
   { icon: Activity, label: 'Atividades', href: '/atividades', active: false },
@@ -18,8 +20,22 @@ const navItems = [
   { icon: User, label: 'Perfil', href: '/perfil', active: false },
 ]
 
+interface GuestRecord {
+  id: number
+  data: string
+  atividade: string
+  pc_busca: number
+  mobile_busca: number
+  quiz: number
+  xbox: number
+  total_pts: number
+  meta_batida: boolean
+  notas: string
+  created_at: string
+}
+
 export default function Dashboard() {
-  const { user, profile, loading, signOut } = useAuth()
+  const { user, profile, loading, isGuest, signOut } = useAuth()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
@@ -32,12 +48,70 @@ export default function Dashboard() {
   const metaMensal = profile?.meta_mensal || 12000
   const progress = Math.min(Math.round((stats.totalSaldo / metaMensal) * 100), 100)
 
+  // Load guest data from localStorage
+  const loadGuestData = useCallback(() => {
+    const savedData = localStorage.getItem(GUEST_DATA_KEY)
+    if (savedData) {
+      const guestData = JSON.parse(savedData)
+      const records: GuestRecord[] = guestData.registros || []
+
+      // Set recent records
+      setRecentRecords(records.slice(0, 10) as DailyRecord[])
+
+      // Calculate weekly data
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const weeklyRecords = records.filter(r => new Date(r.data) >= sevenDaysAgo)
+      const chartData = weeklyRecords.map(r => ({
+        day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
+        pts: r.total_pts
+      }))
+      setWeeklyData(chartData)
+
+      // Calculate stats
+      const totalSaldo = records.reduce((sum, r) => sum + (r.total_pts || 0), 0)
+      const mediaDiaria = records.length > 0 ? Math.round(totalSaldo / records.length) : 0
+
+      // Calculate streak
+      const sortedRecords = records
+        .filter(r => r.meta_batida)
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+
+      let streak = 0
+      let currentDate = new Date()
+      for (const record of sortedRecords) {
+        const recordDate = new Date(record.data)
+        const diffDays = Math.floor((currentDate.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24))
+        if (diffDays <= 1) {
+          streak++
+          currentDate = recordDate
+        } else {
+          break
+        }
+      }
+
+      setStats({ totalSaldo, streak, mediaDiaria })
+    }
+    setDataLoading(false)
+  }, [])
+
   // Fetch data when user is available
   useEffect(() => {
     async function loadData() {
-      if (!user) return
-
       setDataLoading(true)
+
+      // Guest mode: load from localStorage
+      if (isGuest) {
+        loadGuestData()
+        return
+      }
+
+      // Not logged in and not guest
+      if (!user) {
+        setDataLoading(false)
+        return
+      }
+
       try {
         // Fetch weekly records for chart
         const { data: weekly } = await fetchWeeklyRecords(user.id)
@@ -66,11 +140,17 @@ export default function Dashboard() {
     }
 
     loadData()
-  }, [user])
+  }, [user, isGuest, loadGuestData])
 
   // Reload data when modal closes
   const handleModalClose = () => {
     setIsModalOpen(false)
+
+    if (isGuest) {
+      loadGuestData()
+      return
+    }
+
     if (user) {
       fetchWeeklyRecords(user.id).then(({ data }) => {
         if (data) {
@@ -87,6 +167,13 @@ export default function Dashboard() {
     }
   }
 
+  const handleSignOut = async () => {
+    // Clear guest cookie
+    document.cookie = 'rewards_guest_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    await signOut()
+    window.location.href = '/auth'
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -97,6 +184,9 @@ export default function Dashboard() {
       </div>
     )
   }
+
+  const displayName = isGuest ? 'Visitante' : (profile?.display_name || user?.email || 'Usuário')
+  const userTier = isGuest ? 'Modo Visitante' : (profile?.tier || 'Sem')
 
   return (
     <div className="min-h-screen flex">
@@ -135,11 +225,14 @@ export default function Dashboard() {
         <div className="p-4 border-t border-[var(--border-subtle)]">
           <div className="xbox-card p-4 mb-3">
             <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-1">Usuário</p>
-            <p className="text-sm font-medium text-white truncate">{profile?.display_name || user?.email}</p>
-            <p className="text-xs text-[var(--text-muted)]">{profile?.tier || 'Sem'}</p>
+            <p className="text-sm font-medium text-white truncate">{displayName}</p>
+            <p className="text-xs text-[var(--text-muted)]">{userTier}</p>
+            {isGuest && (
+              <p className="text-xs text-[var(--warning)] mt-1">⚠️ Dados locais</p>
+            )}
           </div>
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="xbox-btn xbox-btn-ghost w-full text-sm"
           >
             <LogOut className="h-4 w-4" />
@@ -182,7 +275,7 @@ export default function Dashboard() {
               </ul>
             </nav>
             <div className="p-4 border-t border-[var(--border-subtle)]">
-              <button onClick={signOut} className="xbox-btn xbox-btn-ghost w-full text-sm">
+              <button onClick={handleSignOut} className="xbox-btn xbox-btn-ghost w-full text-sm">
                 <LogOut className="h-4 w-4" />
                 Sair
               </button>
@@ -212,9 +305,12 @@ export default function Dashboard() {
           {/* Dashboard Header */}
           <header className="mb-8">
             <h2 className="text-3xl font-bold text-white mb-2">
-              Olá, {profile?.display_name || 'Usuário'}! 👋
+              Olá, {displayName}! 👋
             </h2>
-            <p className="text-[var(--text-secondary)]">Acompanhe seu progresso no Microsoft Rewards</p>
+            <p className="text-[var(--text-secondary)]">
+              Acompanhe seu progresso no Microsoft Rewards
+              {isGuest && <span className="text-[var(--warning)]"> (modo visitante)</span>}
+            </p>
           </header>
 
           {/* Stats Grid */}
@@ -371,7 +467,7 @@ export default function Dashboard() {
                     ) : (
                       <tr>
                         <td colSpan={4} className="text-center text-[var(--text-muted)] py-8">
-                          Nenhum registro encontrado
+                          Nenhum registro encontrado. Clique em "Log Hoje" para começar!
                         </td>
                       </tr>
                     )}
@@ -409,7 +505,7 @@ export default function Dashboard() {
       <ReactTooltip id="media-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
       <ReactTooltip id="log-tooltip" place="left" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
 
-      <RegistroModal isOpen={isModalOpen} onClose={handleModalClose} />
+      <RegistroModal isOpen={isModalOpen} onClose={handleModalClose} isGuest={isGuest} />
     </div>
   )
 }
