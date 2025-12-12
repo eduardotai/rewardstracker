@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { Trophy, TrendingUp, Calendar, Target, Plus, Gift, BarChart3, Menu, X as CloseIcon, Home, Activity, PiggyBank, User, LogOut } from 'lucide-react'
 import { Tooltip as ReactTooltip } from 'react-tooltip'
+import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchWeeklyRecords, fetchUserStats, fetchDailyRecords, DailyRecord } from '@/hooks/useData'
 import RegistroModal from './RegistroModal'
@@ -169,6 +170,7 @@ export default function Dashboard() {
         setStats(userStats)
       } catch (error) {
         console.error('Error loading data:', error)
+        toast.error('Erro ao carregar dados do dashboard.')
       } finally {
         setDataLoading(false)
       }

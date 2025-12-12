@@ -32,7 +32,7 @@ interface RegistroModalProps {
 export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false }: RegistroModalProps) {
   const [metaDiaria, setMetaDiaria] = useState(150)
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<RegistroForm>({
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
     defaultValues: {
       data: new Date().toISOString().split('T')[0],
@@ -307,9 +307,17 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="xbox-btn xbox-btn-primary flex-1"
+              disabled={isSubmitting}
+              className="xbox-btn xbox-btn-primary flex-1 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              💾 Salvar Registro
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                '💾 Salvar Registro'
+              )}
             </button>
             <button
               type="button"

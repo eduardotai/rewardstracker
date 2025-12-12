@@ -1,25 +1,26 @@
 import { supabase } from '@/lib/supabase'
 
-// Helper to timeout promises
-const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 15000, retries: number = 3): Promise<T> => {
-    for (let i = 0; i < retries; i++) {
+const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 10000, retries: number = 2): Promise<T> => {
+    for (let i = 0; i <= retries; i++) {
         let timeoutId: NodeJS.Timeout
         try {
+            const start = Date.now()
             const promise = promiseFactory()
             const timeoutPromise = new Promise<T>((_, reject) => {
                 timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms)
             })
             const result = await Promise.race([promise, timeoutPromise])
             clearTimeout(timeoutId!)
+            // console.log(`Request took ${Date.now() - start}ms`)
             return result
         } catch (error) {
             clearTimeout(timeoutId!)
-            const isLastAttempt = i === retries - 1
+            const isLastAttempt = i === retries
             if (isLastAttempt) throw error
 
-            // Wait before retrying (exponential backoff: 1s, 2s, 4s...)
+            // Wait before retrying (exponential backoff: 1s, 2s)
             const delay = 1000 * Math.pow(2, i)
-            console.log(`Attempt ${i + 1} failed, retrying in ${delay}ms...`)
+            console.warn(`Request attempt ${i + 1} failed, retrying in ${delay}ms...`, error)
             await new Promise(resolve => setTimeout(resolve, delay))
         }
     }

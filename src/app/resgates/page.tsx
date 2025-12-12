@@ -6,6 +6,7 @@ import { Plus, Calculator, Home, Activity, BarChart3, PiggyBank, User, Gift, Men
 import ResgateModal from '@/components/ResgateModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchResgates, Resgate } from '@/hooks/useData'
+import toast from 'react-hot-toast'
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: false },
@@ -63,6 +64,7 @@ export default function ResgatesPage() {
         }
       } catch (error) {
         console.error('Error loading resgates:', error)
+        toast.error('Erro ao carregar dados. Verifique sua conexão.')
         // Ensure loading state is cleared even on error so UI doesn't freeze
         setLoading(false)
       }
@@ -128,7 +130,10 @@ export default function ResgatesPage() {
     const today = new Date().toISOString().split('T')[0]
 
     // Create resgate object
-    const newResgate: Omit<DisplayResgate, 'id'> = {
+    // Create resgate object with temp ID for optimistic update
+    const tempId = Date.now()
+    const newResgate = {
+      id: tempId,
       data: today,
       item: data.item,
       pts_usados: data.pts_usados,
@@ -138,15 +143,21 @@ export default function ResgatesPage() {
 
     addResgate(newResgate)
     setIsModalOpen(false)
+    toast.success('Resgate adicionado!')
 
     // Persist to Supabase if authenticated
     if (!isGuest && user) {
       try {
         const { insertResgate } = await import('@/hooks/useData')
-        await insertResgate(user.id, newResgate)
+        const { error } = await insertResgate(user.id, newResgate)
+
+        if (error) throw error
+
       } catch (error) {
         console.error('Error saving resgate:', error)
-        // Optionally revert optimistic update or show toast error
+        toast.error('Erro ao salvar no servidor. Tente novamente.')
+        // Rollback optimistic update
+        deleteResgate(tempId)
       }
     }
   }
