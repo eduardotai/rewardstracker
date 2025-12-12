@@ -2,40 +2,48 @@
 
 import { Trophy, Flame, Target, Star } from 'lucide-react'
 
-const badges = [
-  {
-    id: 'streak_master',
-    name: 'Streak Master',
-    description: '7 dias consecutivos',
-    icon: Flame,
-    earned: true,
-    color: 'text-orange-500',
-  },
-  {
-    id: 'points_hunter',
-    name: 'Caçador de Pontos',
-    description: '5000 pontos acumulados',
-    icon: Target,
-    earned: true,
-    color: 'text-blue-500',
-  },
-  {
-    id: 'monthly_champion',
-    name: 'Campeão Mensal',
-    description: '12000 pontos em um mês',
-    icon: Trophy,
-    earned: false,
-    color: 'text-yellow-500',
-  },
-  {
-    id: 'consistency_star',
-    name: 'Estrela da Consistência',
-    description: '30 dias sem perder streak',
-    icon: Star,
-    earned: false,
-    color: 'text-purple-500',
-  },
-]
+// Dynamic badge calculation
+const calculateBadges = () => {
+  const totalSaldo = [120, 150, 200, 180, 220, 250, 300].reduce((sum, pts) => sum + pts, 0) // from mockData
+  const streak = [120, 150, 200, 180, 220, 250, 300].filter(pts => pts >= 150).length
+
+  return [
+    {
+      id: 'streak_master',
+      name: 'Streak Master',
+      description: '7 dias consecutivos',
+      icon: Flame,
+      earned: streak >= 7,
+      color: 'text-orange-500',
+    },
+    {
+      id: 'points_hunter',
+      name: 'Caçador de Pontos',
+      description: '5000 pontos acumulados',
+      icon: Target,
+      earned: totalSaldo >= 5000,
+      color: 'text-blue-500',
+    },
+    {
+      id: 'monthly_champion',
+      name: 'Campeão Mensal',
+      description: '12000 pontos em um mês',
+      icon: Trophy,
+      earned: totalSaldo >= 12000,
+      color: 'text-yellow-500',
+    },
+    {
+      id: 'consistency_star',
+      name: 'Estrela da Consistência',
+      description: '30 dias sem perder streak',
+      icon: Star,
+      earned: streak >= 30,
+      color: 'text-purple-500',
+    },
+  ]
+}
+
+const badges = calculateBadges()
 
 export default function Badges() {
   return (
@@ -55,7 +63,7 @@ export default function Badges() {
             >
               <Icon className={`h-8 w-8 mx-auto mb-2 ${badge.earned ? badge.color : 'text-gray-400'}`} />
               <h3 className="font-semibold text-sm">{badge.name}</h3>
-              <p className="text-xs text-gray-600">{badge.description}</p>
+               <p className="text-xs text-gray-800">{badge.description}</p>
             </div>
           )
         })}

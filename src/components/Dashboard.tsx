@@ -19,10 +19,12 @@ const mockData = [
 ]
 
 export default function Dashboard() {
-  const [saldo] = useState(8500)
-  const [progress] = useState(70) // %
-  const [streak] = useState(5)
-  const [mediaDiaria] = useState(150)
+  // Dynamic calculations from mock data
+  const totalSaldo = mockData.reduce((sum, day) => sum + day.pts, 0)
+  const mediaDiaria = Math.round(totalSaldo / mockData.length)
+  const progress = Math.min(Math.round((totalSaldo / 12000) * 100), 100)
+  const streak = mockData.filter(day => day.pts >= 150).length // Assuming 150 is meta
+
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (

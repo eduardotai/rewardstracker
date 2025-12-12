@@ -27,11 +27,11 @@ export default function Leaderboard() {
               {user.rank === 2 && <Medal className="h-5 w-5 text-gray-400" />}
               {user.rank === 3 && <Award className="h-5 w-5 text-amber-600" />}
               <span className="font-semibold">#{user.rank}</span>
-              <span>{user.name}</span>
+               <span className="text-gray-900">{user.name}</span>
             </div>
             <div className="text-right">
               <div className="font-bold">{user.pts.toLocaleString()} pts</div>
-              <div className="text-sm text-gray-600">{user.tier}</div>
+               <div className="text-sm text-gray-800">{user.tier}</div>
             </div>
           </div>
         ))}
