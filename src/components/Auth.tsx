@@ -35,10 +35,11 @@ export default function AuthComponent() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      console.log('Auth Component: User detected, redirecting to dashboard')
-      router.push('/')
+      console.log('Auth Component: User detected, forcing redirect to dashboard')
+      // Use window.location.href to force a hard reload/navigation
+      window.location.href = '/'
     }
-  }, [user, router])
+  }, [user])
 
   const handleGuestMode = () => {
     console.log('Auth Component: Entering as guest')
