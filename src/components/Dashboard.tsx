@@ -1,22 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
-import { Trophy, TrendingUp, Calendar, Target, Plus, Gift, BarChart3, Menu, X as CloseIcon, Home, Activity, PiggyBank, User } from 'lucide-react'
+import { Trophy, TrendingUp, Calendar, Target, Plus, Gift, BarChart3, Menu, X as CloseIcon, Home, Activity, PiggyBank, User, LogOut } from 'lucide-react'
 import { Tooltip as ReactTooltip } from 'react-tooltip'
+import { useAuth } from '@/contexts/AuthContext'
+import { fetchWeeklyRecords, fetchUserStats, fetchDailyRecords, DailyRecord } from '@/hooks/useData'
 import RegistroModal from './RegistroModal'
 import Badges from './Badges'
 import Leaderboard from './Leaderboard'
-
-const mockData = [
-  { day: 'Seg', pts: 120 },
-  { day: 'Ter', pts: 150 },
-  { day: 'Qua', pts: 200 },
-  { day: 'Qui', pts: 180 },
-  { day: 'Sex', pts: 220 },
-  { day: 'Sab', pts: 250 },
-  { day: 'Dom', pts: 300 },
-]
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: true },
@@ -27,13 +19,84 @@ const navItems = [
 ]
 
 export default function Dashboard() {
-  const totalSaldo = mockData.reduce((sum, day) => sum + day.pts, 0)
-  const mediaDiaria = Math.round(totalSaldo / mockData.length)
-  const progress = Math.min(Math.round((totalSaldo / 12000) * 100), 100)
-  const streak = mockData.filter(day => day.pts >= 150).length
-
+  const { user, profile, loading, signOut } = useAuth()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+  // Dynamic data states
+  const [weeklyData, setWeeklyData] = useState<{ day: string; pts: number }[]>([])
+  const [recentRecords, setRecentRecords] = useState<DailyRecord[]>([])
+  const [stats, setStats] = useState({ totalSaldo: 0, streak: 0, mediaDiaria: 0 })
+  const [dataLoading, setDataLoading] = useState(true)
+
+  const metaMensal = profile?.meta_mensal || 12000
+  const progress = Math.min(Math.round((stats.totalSaldo / metaMensal) * 100), 100)
+
+  // Fetch data when user is available
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return
+
+      setDataLoading(true)
+      try {
+        // Fetch weekly records for chart
+        const { data: weekly } = await fetchWeeklyRecords(user.id)
+        if (weekly) {
+          const chartData = weekly.map(r => ({
+            day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
+            pts: r.total_pts
+          }))
+          setWeeklyData(chartData)
+        }
+
+        // Fetch recent records
+        const { data: recent } = await fetchDailyRecords(user.id, 10)
+        if (recent) {
+          setRecentRecords(recent)
+        }
+
+        // Fetch stats
+        const userStats = await fetchUserStats(user.id)
+        setStats(userStats)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setDataLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
+
+  // Reload data when modal closes
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    if (user) {
+      fetchWeeklyRecords(user.id).then(({ data }) => {
+        if (data) {
+          setWeeklyData(data.map(r => ({
+            day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
+            pts: r.total_pts
+          })))
+        }
+      })
+      fetchDailyRecords(user.id, 10).then(({ data }) => {
+        if (data) setRecentRecords(data)
+      })
+      fetchUserStats(user.id).then(setStats)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="xbox-shimmer w-16 h-16 rounded-full mx-auto mb-4" />
+          <p className="text-[var(--text-secondary)]">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -68,13 +131,20 @@ export default function Dashboard() {
           </ul>
         </nav>
 
-        {/* Quick Stats Footer */}
+        {/* User Info & Logout */}
         <div className="p-4 border-t border-[var(--border-subtle)]">
-          <div className="xbox-card p-4">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-2">Saldo Total</p>
-            <p className="text-2xl font-bold text-[var(--xbox-green)]">{totalSaldo.toLocaleString()}</p>
-            <p className="text-xs text-[var(--text-secondary)]">pontos</p>
+          <div className="xbox-card p-4 mb-3">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-1">Usuário</p>
+            <p className="text-sm font-medium text-white truncate">{profile?.display_name || user?.email}</p>
+            <p className="text-xs text-[var(--text-muted)]">{profile?.tier || 'Sem'}</p>
           </div>
+          <button
+            onClick={signOut}
+            className="xbox-btn xbox-btn-ghost w-full text-sm"
+          >
+            <LogOut className="h-4 w-4" />
+            Sair
+          </button>
         </div>
       </aside>
 
@@ -111,6 +181,12 @@ export default function Dashboard() {
                 ))}
               </ul>
             </nav>
+            <div className="p-4 border-t border-[var(--border-subtle)]">
+              <button onClick={signOut} className="xbox-btn xbox-btn-ghost w-full text-sm">
+                <LogOut className="h-4 w-4" />
+                Sair
+              </button>
+            </div>
           </aside>
         </div>
       )}
@@ -129,39 +205,35 @@ export default function Dashboard() {
             <Gift className="h-5 w-5" />
             Rewards Tracker
           </h1>
-          <div className="w-10" /> {/* Spacer */}
+          <div className="w-10" />
         </header>
 
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {/* Dashboard Header */}
           <header className="mb-8">
-            <h2 className="text-3xl font-bold text-white mb-2">Dashboard</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">
+              Olá, {profile?.display_name || 'Usuário'}! 👋
+            </h2>
             <p className="text-[var(--text-secondary)]">Acompanhe seu progresso no Microsoft Rewards</p>
           </header>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {/* Card Saldo Atual */}
-            <div
-              className="xbox-card p-6"
-              data-tooltip-id="saldo-tooltip"
-              data-tooltip-content="Seu saldo total de pontos acumulados"
-            >
+            <div className="xbox-card p-6" data-tooltip-id="saldo-tooltip" data-tooltip-content="Seu saldo total de pontos acumulados">
               <div className="flex items-start justify-between mb-4">
                 <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
                   <Trophy className="h-5 w-5 text-[var(--xbox-green)]" />
                 </div>
               </div>
               <p className="xbox-label">Saldo Atual</p>
-              <p className="text-2xl font-bold text-white">{totalSaldo.toLocaleString()} <span className="text-sm text-[var(--text-muted)]">pts</span></p>
+              <p className="text-2xl font-bold text-white">
+                {dataLoading ? '---' : stats.totalSaldo.toLocaleString()} <span className="text-sm text-[var(--text-muted)]">pts</span>
+              </p>
             </div>
 
             {/* Card Progresso Meta */}
-            <div
-              className="xbox-card p-6"
-              data-tooltip-id="progress-tooltip"
-              data-tooltip-content="Progresso para alcançar 12.000 pontos mensais"
-            >
+            <div className="xbox-card p-6" data-tooltip-id="progress-tooltip" data-tooltip-content={`Progresso para alcançar ${metaMensal.toLocaleString()} pontos mensais`}>
               <div className="flex items-start justify-between mb-4">
                 <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
                   <Target className="h-5 w-5 text-[var(--xbox-green)]" />
@@ -172,37 +244,33 @@ export default function Dashboard() {
               <div className="xbox-progress mt-2">
                 <div className="xbox-progress-bar" style={{ width: `${progress}%` }} />
               </div>
-              <p className="text-xs text-[var(--text-muted)] mt-2">{totalSaldo.toLocaleString()} / 12.000 pts</p>
+              <p className="text-xs text-[var(--text-muted)] mt-2">{stats.totalSaldo.toLocaleString()} / {metaMensal.toLocaleString()} pts</p>
             </div>
 
             {/* Card Streak */}
-            <div
-              className="xbox-card p-6"
-              data-tooltip-id="streak-tooltip"
-              data-tooltip-content="Dias consecutivos de atividade"
-            >
+            <div className="xbox-card p-6" data-tooltip-id="streak-tooltip" data-tooltip-content="Dias consecutivos de atividade">
               <div className="flex items-start justify-between mb-4">
                 <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
                   <Calendar className="h-5 w-5 text-[var(--xbox-green)]" />
                 </div>
               </div>
               <p className="xbox-label">Streak</p>
-              <p className="text-2xl font-bold text-white">{streak} <span className="text-sm text-[var(--text-muted)]">dias</span></p>
+              <p className="text-2xl font-bold text-white">
+                {dataLoading ? '---' : stats.streak} <span className="text-sm text-[var(--text-muted)]">dias</span>
+              </p>
             </div>
 
             {/* Card Média Diária */}
-            <div
-              className="xbox-card p-6"
-              data-tooltip-id="media-tooltip"
-              data-tooltip-content="Média de pontos ganhos por dia"
-            >
+            <div className="xbox-card p-6" data-tooltip-id="media-tooltip" data-tooltip-content="Média de pontos ganhos por dia">
               <div className="flex items-start justify-between mb-4">
                 <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
                   <TrendingUp className="h-5 w-5 text-[var(--xbox-green)]" />
                 </div>
               </div>
               <p className="xbox-label">Média Diária</p>
-              <p className="text-2xl font-bold text-white">{mediaDiaria} <span className="text-sm text-[var(--text-muted)]">pts</span></p>
+              <p className="text-2xl font-bold text-white">
+                {dataLoading ? '---' : stats.mediaDiaria} <span className="text-sm text-[var(--text-muted)]">pts</span>
+              </p>
             </div>
           </div>
 
@@ -214,40 +282,48 @@ export default function Dashboard() {
                 Pontos Últimos 7 Dias
               </h3>
             </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={mockData}>
-                <RechartsTooltip
-                  contentStyle={{
-                    background: 'var(--bg-elevated)',
-                    borderColor: 'var(--border-subtle)',
-                    color: 'var(--text-primary)',
-                    borderRadius: '4px',
-                    border: '1px solid var(--border-subtle)',
-                  }}
-                  itemStyle={{ color: 'var(--text-primary)' }}
-                  labelStyle={{ color: 'var(--text-secondary)' }}
-                />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="pts"
-                  stroke="var(--xbox-green)"
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--xbox-green)', stroke: 'var(--bg-secondary)', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: 'var(--xbox-green)', fill: '#fff' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {dataLoading ? (
+              <div className="h-[250px] flex items-center justify-center">
+                <div className="xbox-shimmer w-full h-full rounded" />
+              </div>
+            ) : weeklyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={weeklyData}>
+                  <RechartsTooltip
+                    contentStyle={{
+                      background: 'var(--bg-elevated)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-primary)',
+                      borderRadius: '4px',
+                      border: '1px solid var(--border-subtle)',
+                    }}
+                  />
+                  <XAxis
+                    dataKey="day"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="pts"
+                    stroke="var(--xbox-green)"
+                    strokeWidth={2}
+                    dot={{ fill: 'var(--xbox-green)', stroke: 'var(--bg-secondary)', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: 'var(--xbox-green)', fill: '#fff' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-[var(--text-muted)]">
+                Nenhum registro nos últimos 7 dias
+              </div>
+            )}
           </div>
 
           {/* Bottom Grid */}
@@ -269,30 +345,36 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td className="text-white">12 Dez 2024</td>
-                      <td className="text-[var(--text-secondary)]">Buscas + Quiz</td>
-                      <td className="text-right font-semibold text-[var(--xbox-green)]">150</td>
-                      <td className="text-center">
-                        <span className="xbox-badge xbox-badge-success">✓ Alcançada</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="text-white">11 Dez 2024</td>
-                      <td className="text-[var(--text-secondary)]">Xbox</td>
-                      <td className="text-right font-semibold text-[var(--xbox-green)]">100</td>
-                      <td className="text-center">
-                        <span className="xbox-badge xbox-badge-success">✓ Alcançada</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="text-white">10 Dez 2024</td>
-                      <td className="text-[var(--text-secondary)]">Buscas</td>
-                      <td className="text-right font-semibold text-[var(--error)]">50</td>
-                      <td className="text-center">
-                        <span className="xbox-badge xbox-badge-error">✗ Pendente</span>
-                      </td>
-                    </tr>
+                    {dataLoading ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-8">
+                          <div className="xbox-shimmer w-32 h-4 mx-auto" />
+                        </td>
+                      </tr>
+                    ) : recentRecords.length > 0 ? (
+                      recentRecords.slice(0, 5).map((record) => (
+                        <tr key={record.id}>
+                          <td className="text-white">
+                            {new Date(record.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="text-[var(--text-secondary)]">{record.atividade}</td>
+                          <td className={`text-right font-semibold ${record.meta_batida ? 'text-[var(--xbox-green)]' : 'text-[var(--error)]'}`}>
+                            {record.total_pts}
+                          </td>
+                          <td className="text-center">
+                            <span className={`xbox-badge ${record.meta_batida ? 'xbox-badge-success' : 'xbox-badge-error'}`}>
+                              {record.meta_batida ? '✓ Alcançada' : '✗ Pendente'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="text-center text-[var(--text-muted)] py-8">
+                          Nenhum registro encontrado
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -327,7 +409,7 @@ export default function Dashboard() {
       <ReactTooltip id="media-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
       <ReactTooltip id="log-tooltip" place="left" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
 
-      <RegistroModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <RegistroModal isOpen={isModalOpen} onClose={handleModalClose} />
     </div>
   )
 }

@@ -1,0 +1,77 @@
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+// Routes that don't require authentication
+const publicRoutes = ['/auth', '/auth/callback', '/auth/auth-code-error']
+
+export async function middleware(request: NextRequest) {
+    const { pathname } = request.nextUrl
+
+    // Skip auth check for public routes
+    if (publicRoutes.some(route => pathname.startsWith(route))) {
+        return NextResponse.next()
+    }
+
+    // Skip auth check for static files and API routes
+    if (
+        pathname.startsWith('/_next') ||
+        pathname.startsWith('/api') ||
+        pathname.includes('.') // static files
+    ) {
+        return NextResponse.next()
+    }
+
+    // Create a response to modify
+    let response = NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
+    })
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return request.cookies.getAll()
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+                    response = NextResponse.next({
+                        request,
+                    })
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        response.cookies.set(name, value, options)
+                    )
+                },
+            },
+        }
+    )
+
+    // Check if user is authenticated
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+        // Redirect to login page
+        const redirectUrl = new URL('/auth', request.url)
+        redirectUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(redirectUrl)
+    }
+
+    return response
+}
+
+export const config = {
+    matcher: [
+        /*
+         * Match all request paths except:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public folder
+         */
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    ],
+}

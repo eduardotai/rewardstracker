@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import { Providers } from "./providers";
 import "./globals.css";
 import 'react-tooltip/dist/react-tooltip.css';
 
@@ -29,7 +30,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Toaster
           position="top-right"
           toastOptions={{
