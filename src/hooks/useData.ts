@@ -352,12 +352,14 @@ export async function fetchLeaderboardData(currentUserId?: string) {
         const [profilesResult, recordsResult] = await Promise.all([
             withTimeout(() => supabase
                 .from('profiles')
-                .select('id, display_name, tier, email')
+                .select('id, display_name, tier, email'),
+                20000 // Increase timeout to 20s for heavy leaderboard fetch
             ),
             withTimeout(() => supabase
                 .from('registros_diarios')
                 .select('user_id, total_pts')
-                .gte('data', thirtyDaysAgo.toISOString().split('T')[0])
+                .gte('data', thirtyDaysAgo.toISOString().split('T')[0]),
+                20000 // Increase timeout to 20s for heavy leaderboard fetch
             )
         ])
 
