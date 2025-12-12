@@ -69,15 +69,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isGuest, setIsGuest] = useState(false)
     const [guestData, setGuestData] = useState<GuestData | null>(null)
 
-    const fetchProfile = async (userId: string) => {
+    const fetchProfile = async (userId: string, userEmail?: string) => {
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
-            .single()
+            .maybeSingle() // Use maybeSingle to avoid 406 error when profile doesn't exist
 
-        if (!error && data) {
+        if (error) {
+            console.error('Error fetching profile:', error)
+            return
+        }
+
+        if (data) {
             setProfile(data)
+        } else if (userEmail) {
+            // Profile doesn't exist, create one for new users
+            const newProfile = {
+                id: userId,
+                email: userEmail,
+                display_name: userEmail.split('@')[0],
+                tier: 'Sem',
+                meta_mensal: 12000,
+            }
+
+            const { data: createdProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert([newProfile])
+                .select()
+                .single()
+
+            if (!createError && createdProfile) {
+                setProfile(createdProfile)
+            } else {
+                console.error('Error creating profile:', createError)
+            }
         }
     }
 
@@ -128,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSession(session)
             setUser(session?.user ?? null)
             if (session?.user) {
-                fetchProfile(session.user.id)
+                fetchProfile(session.user.id, session.user.email)
             }
             setLoading(false)
         })
@@ -143,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     // Clear guest mode when logging in
                     localStorage.removeItem(GUEST_STORAGE_KEY)
                     setIsGuest(false)
-                    await fetchProfile(session.user.id)
+                    await fetchProfile(session.user.id, session.user.email)
                 } else {
                     setProfile(null)
                 }
