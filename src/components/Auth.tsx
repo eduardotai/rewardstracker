@@ -31,6 +31,12 @@ export default function AuthComponent() {
     setRedirectTo(`${window.location.origin}/auth/callback`)
   }, [])
 
+  useEffect(() => {
+    if (user) {
+      router.push('/')
+    }
+  }, [user, router])
+
   const handleGuestMode = () => {
     console.log('Auth Component: Entering as guest')
     localStorage.setItem(GUEST_STORAGE_KEY, 'true')
@@ -41,7 +47,7 @@ export default function AuthComponent() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    window.location.reload()
+    router.refresh()
   }
 
   return (
