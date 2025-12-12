@@ -3,121 +3,40 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  Check, Target, Gift, Menu, X as CloseIcon, Home, Activity, BarChart3, PiggyBank, User,
-  Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Bell, BellOff, Info,
-  Gamepad2, Smartphone, Cpu, Zap, Trophy, Flame
+  Home, Activity, BarChart3, PiggyBank, User,
+  Check, Save, Monitor, Smartphone, Brain, Gamepad2, Gift, LogOut, Menu, X as CloseIcon, Calendar, Target, Plus
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ACTIVITIES_LIST, REWARDS_LIMITS } from '@/lib/rewards-constants'
-import { fetchMonthlyStatus, DailyRecord } from '@/hooks/useData'
-import RegistroModal from '@/components/RegistroModal'
+import { fetchMonthlyStatus, insertDailyRecord, invalidateCache } from '@/hooks/useData'
 import toast from 'react-hot-toast'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, subDays } from 'date-fns'
+import { format, subDays, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-const DAILY_CHECKLIST_KEY = 'rewards_daily_checklist'
-const REMINDER_KEY = 'rewards_reminder_enabled'
+const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: false },
-  { icon: Activity, label: 'Mission Control', href: '/atividades', active: true }, // Renamed
+  { icon: Activity, label: 'Atividades', href: '/atividades', active: true },
   { icon: BarChart3, label: 'Gráficos', href: '/graficos', active: false },
   { icon: PiggyBank, label: 'Resgates', href: '/resgates', active: false },
   { icon: User, label: 'Perfil', href: '/perfil', active: false },
 ]
 
 export default function AtividadesPage() {
-  const { isGuest, user, profile } = useAuth()
+  const { isGuest, user, profile, signout } = useAuth()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  // Form State
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [activityType, setActivityType] = useState('')
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({})
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [notes, setNotes] = useState('')
+  const [metaOverride, setMetaOverride] = useState(false)
+  const [metaGoal, setMetaGoal] = useState(150)
 
-  // Calendar/Streak State
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [monthlyStatus, setMonthlyStatus] = useState<Pick<DailyRecord, 'data' | 'meta_batida' | 'total_pts'>[]>([])
-
-  // Reminder State
-  const [reminderEnabled, setReminderEnabled] = useState(false)
-
-  // Group activities
-  const searchActivities = ACTIVITIES_LIST.filter(a => a.type === 'search')
-  const xboxActivities = ACTIVITIES_LIST.filter(a => a.type === 'xbox')
-  const gamePassActivities = ACTIVITIES_LIST.filter(a => a.type === 'gamepass')
-  const dailyActivities = ACTIVITIES_LIST.filter(a => a.type === 'daily' || a.type === 'other')
-
-  // Load daily checklist state
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const key = `${DAILY_CHECKLIST_KEY}_${user?.id || 'guest'}_${today}`
-    const saved = localStorage.getItem(key)
-    if (saved) {
-      setCheckedItems(JSON.parse(saved))
-    } else {
-      setCheckedItems({})
-    }
-  }, [user])
-
-  // Load Reminder State
-  useEffect(() => {
-    const savedReminder = localStorage.getItem(REMINDER_KEY)
-    if (savedReminder === 'true') {
-      if (Notification.permission === 'granted') {
-        setReminderEnabled(true)
-      }
-    }
-  }, [])
-
-  // Fetch Monthly Data
-  useEffect(() => {
-    async function loadMonth() {
-      if (!user) return
-      // Fetch current and previous month to ensure we have streak data
-      // For simplicity in this view, just current month + basic streak check
-      const { data } = await fetchMonthlyStatus(user.id, currentDate.getMonth(), currentDate.getFullYear())
-      if (data) setMonthlyStatus(data)
-    }
-    loadMonth()
-  }, [user, currentDate])
-
-  const toggleItem = (id: string) => {
-    const today = new Date().toISOString().split('T')[0]
-    const key = `${DAILY_CHECKLIST_KEY}_${user?.id || 'guest'}_${today}`
-
-    setCheckedItems(prev => {
-      const next = { ...prev, [id]: !prev[id] }
-      localStorage.setItem(key, JSON.stringify(next))
-      return next
-    })
-  }
-
-  const toggleReminder = async () => {
-    if (reminderEnabled) {
-      setReminderEnabled(false)
-      localStorage.setItem(REMINDER_KEY, 'false')
-      toast.success('Protocolo de lembrete desativado.')
-      return
-    }
-
-    if (!('Notification' in window)) {
-      toast.error('Sistema de notificação indisponível.')
-      return
-    }
-
-    const permission = await Notification.requestPermission()
-    if (permission === 'granted') {
-      setReminderEnabled(true)
-      localStorage.setItem(REMINDER_KEY, 'true')
-      new Notification('Mission Control', {
-        body: 'Rastreamento ativo. Vamos bater a meta hoje, Spartan?',
-        icon: '/favicon.ico'
-      })
-      toast.success('Protocolo de lembrete ativado!')
-    } else {
-      toast.error('Permissão negada.')
-    }
-  }
-
-  // Calc Totals
+  // Logic to calculate points
   const userLevel = profile?.level || 2
   const limits = userLevel === 1 ? REWARDS_LIMITS.LEVEL_1 : REWARDS_LIMITS.LEVEL_2
 
@@ -137,24 +56,92 @@ export default function AtividadesPage() {
         else others += points
       }
     })
-    return { pc_busca: pc, mobile_busca: mobile, xbox, quiz: quiz + others }
+    return { pc, mobile, xbox, quiz: quiz + others, total: pc + mobile + xbox + quiz + others }
   }
 
   const totals = calculateTotals()
-  const grandTotal = totals.pc_busca + totals.mobile_busca + totals.xbox + totals.quiz
+  const metaBatida = totals.total >= metaGoal || metaOverride
 
-  // Daily Goal (Estimated)
-  const DAILY_GOAL = 180 + (limits.PC_SEARCH + limits.MOBILE_SEARCH) // Approximate goal
-  const progressPercent = Math.min(100, Math.round((grandTotal / DAILY_GOAL) * 100))
+  // Toggle Item
+  const toggleItem = (id: string) => {
+    setCheckedItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
+  }
+
+  // Pre-fill activity type based on what's checked
+  useEffect(() => {
+    if (totals.total > 0 && !activityType) {
+      if (totals.pc > 0 || totals.mobile > 0) setActivityType('Buscas')
+      else if (totals.xbox > 0) setActivityType('Xbox')
+      else setActivityType('Quiz')
+    }
+  }, [totals, activityType])
+
+  const handleSave = async () => {
+    if (!activityType) {
+      toast.error('Selecione um tipo de atividade principal.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const recordData = {
+        data: date,
+        atividade: activityType,
+        pc_busca: totals.pc,
+        mobile_busca: totals.mobile,
+        quiz: totals.quiz,
+        xbox: totals.xbox,
+        total_pts: totals.total,
+        meta_batida: metaBatida,
+        notas: notes
+      }
+
+      if (isGuest) {
+        // Save to LocalStorage
+        const savedData = localStorage.getItem(GUEST_DATA_KEY)
+        const guestData = savedData ? JSON.parse(savedData) : { registros: [] }
+
+        const newRecord = {
+          ...recordData,
+          id: Date.now(),
+          created_at: new Date().toISOString()
+        }
+
+        guestData.registros.unshift(newRecord)
+        localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(guestData))
+        toast.success('Atividade registrada (Modo Visitante)!')
+      } else if (user) {
+        // Save to Supabase
+        const { error } = await insertDailyRecord(user.id, recordData)
+        if (error) throw error
+        toast.success('Atividade registrada com sucesso!')
+      }
+
+      // Reset form (optional, or just navigating away?)
+      // For now, let's keep it on page but clear checks? No, user might want to see what they just did.
+      // Maybe play a sound or meaningful success animation?
+
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao salvar atividade.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const displayName = isGuest ? 'Visitante' : (profile?.display_name || user?.email || 'Usuário')
 
   return (
-    <div className="min-h-screen flex bg-[#0f1115] text-white font-sans selection:bg-[var(--xbox-green)] selection:text-black">
+    <div className="min-h-screen flex bg-[var(--bg-primary)]">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-white/5 bg-[#1a1c20]">
-        <div className="p-6 border-b border-white/5">
-          <h1 className="text-xl font-bold text-[var(--xbox-green)] flex items-center gap-2 font-mono tracking-tighter">
-            <Zap className="h-6 w-6" />
-            MISSION:CONTROL
+      <aside className="hidden lg:flex flex-col w-64 border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+        <div className="p-6 border-b border-[var(--border-subtle)]">
+          <h1 className="text-xl font-bold text-[var(--xbox-green)] flex items-center gap-2">
+            <Gift className="h-6 w-6" />
+            Rewards Tracker
           </h1>
         </div>
         <nav className="flex-1 p-4">
@@ -163,12 +150,13 @@ export default function AtividadesPage() {
               <li key={item.label}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative group ${item.active
-                    ? 'bg-[var(--xbox-green)]/10 text-[var(--xbox-green)] border-l-2 border-[var(--xbox-green)]'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
+                    ? 'bg-[var(--bg-tertiary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
                     }`}
                 >
-                  <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)] drop-shadow-[0_0_5px_rgba(16,124,16,0.5)]' : 'group-hover:scale-110 transition-transform'}`} />
+                  {item.active && <span className="xbox-nav-indicator" />}
+                  <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                   {item.label}
                 </Link>
               </li>
@@ -177,259 +165,271 @@ export default function AtividadesPage() {
         </nav>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto relative">
-        {/* Background Grid Effect */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(16,124,16,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,124,16,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm">
+          <div className="xbox-spinner w-12 h-12 border-4 border-[var(--xbox-green)] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
 
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
         {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-40 bg-[#0f1115]/80 backdrop-blur-md border-b border-white/5 p-4 flex items-center justify-between">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-white/5 rounded">
+        <header className="lg:hidden sticky top-0 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-subtle)] p-4 flex items-center justify-between">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[var(--bg-tertiary)] rounded">
             <Menu className="h-6 w-6" />
           </button>
-          <span className="font-mono text-[var(--xbox-green)] font-bold">MISSION:CONTROL</span>
+          <span className="font-bold text-[var(--xbox-green)]">Atividades</span>
           <div className="w-10" />
         </header>
 
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto relative z-10">
+        <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+          <header className="mb-8">
+            <h1 className="text-3xl font-bold text-white mb-2">Registrar Atividade</h1>
+            <p className="text-[var(--text-secondary)]">
+              Marque as tarefas concluídas hoje para acumular pontos.
+            </p>
+          </header>
 
-          {/* Top Bar: Streak & Controls */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-            {/* Streak Strip */}
-            <div className="flex items-center gap-2 bg-black/40 p-2 rounded-full border border-white/10 backdrop-blur-sm">
-              {Array.from({ length: 7 }).map((_, i) => {
-                const d = subDays(new Date(), 6 - i)
-                const dateStr = format(d, 'yyyy-MM-dd')
-                const status = monthlyStatus.find(r => r.data.startsWith(dateStr))
-                const isT = isToday(d)
+            {/* Left Column: Checklist */}
+            <div className="lg:col-span-2 space-y-6">
 
-                return (
-                  <div key={i} className="flex flex-col items-center gap-1 group relative">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all cursor-default
-                       ${isT ? 'border-white text-white shadow-[0_0_10px_rgba(255,255,255,0.3)] scale-110' : 'border-transparent text-gray-500'}
-                       ${status?.meta_batida ? '!bg-[var(--xbox-green)] !border-[var(--xbox-green)] !text-black' : ''}
-                       ${!status?.meta_batida && !isT ? 'bg-white/5' : ''}
-                     `}>
-                      {format(d, 'd')}
-                    </div>
-                    {status?.meta_batida && <div className="w-1 h-1 rounded-full bg-[var(--xbox-green)] shadow-[0_0_5px_var(--xbox-green)]" />}
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleReminder}
-                className={`p-3 rounded-full border transition-all hover:scale-105 active:scale-95 ${reminderEnabled
-                    ? 'bg-[var(--xbox-green)] text-black border-[var(--xbox-green)] shadow-[0_0_15px_rgba(16,124,16,0.4)]'
-                    : 'bg-black/40 text-gray-400 border-white/10 hover:text-white'
-                  }`}
-              >
-                {reminderEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Hero Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center mb-16">
-            <div className="lg:col-span-2 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--xbox-green)]/10 text-[var(--xbox-green)] text-xs font-mono border border-[var(--xbox-green)]/20">
-                <span className="w-2 h-2 rounded-full bg-[var(--xbox-green)] animate-pulse" />
-                SYSTEM: ONLINE
-              </div>
-              <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500 uppercase">
-                Daily Operations
-              </h1>
-              <p className="text-gray-400 max-w-lg text-lg">
-                Execute tarefas de busca, jogos e quizzes para maximizar seus pontos de recompensa.
-              </p>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                disabled={grandTotal === 0}
-                className="mt-4 group relative px-8 py-4 bg-[var(--xbox-green)] text-black font-bold uppercase tracking-widest clip-path-polygon hover:bg-[#159115] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                style={{ clipPath: 'polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%)' }}
-              >
-                Finalizar Operação
-                <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-              </button>
-            </div>
-
-            {/* Daily Ring Hero */}
-            <div className="relative flex items-center justify-center">
-              {/* Outer Glow */}
-              <div className="absolute inset-0 bg-[var(--xbox-green)]/20 blur-[60px] rounded-full" />
-
-              {/* SVG Ring */}
-              <div className="relative w-64 h-64">
-                <svg className="w-full h-full -rotate-90">
-                  <circle cx="128" cy="128" r="120" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
-                  <circle
-                    cx="128" cy="128" r="120"
-                    stroke="var(--xbox-green)"
-                    strokeWidth="12"
-                    fill="none"
-                    strokeDasharray="754"
-                    strokeDashoffset={754 - (754 * progressPercent) / 100}
-                    strokeLinecap="round"
-                    className="transition-[stroke-dashoffset] duration-1000 ease-out shadow-[0_0_20px_var(--xbox-green)]"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-5xl font-black text-white tracking-tight">{grandTotal}</span>
-                  <span className="text-sm font-mono text-[var(--xbox-green)] uppercase">Pontos Hoje</span>
+              {/* Date Picker */}
+              <div className="xbox-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="text-[var(--xbox-green)]" />
+                  <span className="font-semibold">Data do Registro</span>
                 </div>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="xbox-input w-full sm:w-auto"
+                />
               </div>
-            </div>
-          </div>
 
-          {/* Mission Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Card 1: Network Scan (Buscas) */}
-            <div className="group relative bg-[#1a1c20] border border-white/5 p-6 overflow-hidden rounded-xl hover:border-[var(--xbox-green)]/50 transition-colors">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Search className="w-32 h-32 text-[var(--xbox-green)]" />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
-                  <Cpu className="text-[var(--xbox-green)]" />
-                  NETWORK SCAN
-                </h3>
-
-                <div className="space-y-4">
-                  {searchActivities.map(act => {
-                    const limit = act.id === 'pc_search' ? limits.PC_SEARCH : limits.MOBILE_SEARCH
-                    if (limit === 0) return null
-                    const isChecked = checkedItems[act.id]
-
-                    return (
+              {/* Activity Groups */}
+              <div className="space-y-6">
+                {/* Searches */}
+                <div className="xbox-card p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Monitor className="text-[var(--xbox-green)] h-5 w-5" />
+                    Buscas e Navegação
+                  </h3>
+                  <div className="space-y-3">
+                    {ACTIVITIES_LIST.filter(a => a.type === 'search').map(act => (
                       <div
                         key={act.id}
                         onClick={() => toggleItem(act.id)}
-                        className={`
-                                cursor-pointer flex items-center justify-between p-4 bg-black/40 border-l-4 transition-all
-                                ${isChecked ? 'border-l-[var(--xbox-green)] bg-[var(--xbox-green)]/5' : 'border-l-gray-700 hover:bg-white/5'}
-                              `}
+                        className={`flex items-center justify-between p-3 rounded cursor-pointer transition-colors border ${checkedItems[act.id] ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]' : 'bg-[var(--bg-tertiary)] border-transparent hover:border-[var(--border-subtle)]'}`}
                       >
-                        <div>
-                          <p className="font-mono text-sm uppercase tracking-wide text-gray-300">{act.label}</p>
-                          <p className="text-xs text-gray-500">Max: {limit}</p>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${checkedItems[act.id] ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)] text-black' : 'border-[var(--text-muted)]'}`}>
+                            {checkedItems[act.id] && <Check className="w-3.5 h-3.5" />}
+                          </div>
+                          <span className={checkedItems[act.id] ? 'text-white' : 'text-[var(--text-secondary)]'}>{act.label}</span>
                         </div>
-                        <div className={`w-6 h-6 border flex items-center justify-center transition-colors ${isChecked ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)] text-black' : 'border-gray-600'}`}>
-                          {isChecked && <Check className="w-4 h-4" />}
-                        </div>
+                        <span className="text-xs font-mono text-[var(--text-muted)]">
+                          {act.id === 'pc_search' ? limits.PC_SEARCH : limits.MOBILE_SEARCH} pts
+                        </span>
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Card 2: Field Ops (Mobile/Xbox) */}
-            <div className="group relative bg-[#1a1c20] border border-white/5 p-6 overflow-hidden rounded-xl hover:border-[var(--xbox-green)]/50 transition-colors">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Gamepad2 className="w-32 h-32 text-[var(--xbox-green)]" />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
-                  <Gamepad2 className="text-[var(--xbox-green)]" />
-                  FIELD OPS
-                </h3>
-
-                <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-                  {[...xboxActivities, ...gamePassActivities].map(act => {
-                    const isChecked = checkedItems[act.id]
-                    return (
+                {/* Xbox & Game Pass */}
+                <div className="xbox-card p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Gamepad2 className="text-[var(--xbox-green)] h-5 w-5" />
+                    Xbox & Game Pass
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[...ACTIVITIES_LIST.filter(a => a.type === 'xbox'), ...ACTIVITIES_LIST.filter(a => a.type === 'gamepass')].map(act => (
                       <div
                         key={act.id}
                         onClick={() => toggleItem(act.id)}
-                        className={`
-                                cursor-pointer flex items-center justify-between p-3 rounded bg-black/40 border border-transparent transition-all
-                                ${isChecked ? 'border-[var(--xbox-green)]/30 bg-[var(--xbox-green)]/5 shadow-[inset_0_0_10px_rgba(16,124,16,0.1)]' : 'hover:border-white/10'}
-                              `}
+                        className={`flex items-center justify-between p-3 rounded cursor-pointer transition-colors border ${checkedItems[act.id] ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]' : 'bg-[var(--bg-tertiary)] border-transparent hover:border-[var(--border-subtle)]'}`}
                       >
-                        <span className="text-sm font-medium text-gray-300">{act.label}</span>
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${isChecked ? 'bg-[var(--xbox-green)] text-black' : 'bg-white/10 text-gray-400'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${checkedItems[act.id] ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)] text-black' : 'border-[var(--text-muted)]'}`}>
+                            {checkedItems[act.id] && <Check className="w-3.5 h-3.5" />}
+                          </div>
+                          <span className={`text-sm ${checkedItems[act.id] ? 'text-white' : 'text-[var(--text-secondary)]'}`}>{act.label}</span>
+                        </div>
+                        <span className="text-xs font-mono text-[var(--text-muted)]">
                           +{act.points}
                         </span>
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Card 3: Bonus Objectives */}
-            <div className="group relative bg-[#1a1c20] border border-white/5 p-6 overflow-hidden rounded-xl hover:border-[var(--xbox-green)]/50 transition-colors">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Target className="w-32 h-32 text-[var(--xbox-green)]" />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
-                  <Trophy className="text-[var(--xbox-green)]" />
-                  BONUS OBJ
-                </h3>
-
-                <div className="space-y-3">
-                  {dailyActivities.map(act => {
-                    const isChecked = checkedItems[act.id]
-                    return (
+                {/* Daily & Extras */}
+                <div className="xbox-card p-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Brain className="text-[var(--xbox-green)] h-5 w-5" />
+                    Bônus Diário
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {ACTIVITIES_LIST.filter(a => a.type === 'daily' || a.type === 'other').map(act => (
                       <div
                         key={act.id}
                         onClick={() => toggleItem(act.id)}
-                        className={`
-                                cursor-pointer flex items-center justify-between p-3 rounded bg-black/40 border border-transparent transition-all
-                                ${isChecked ? 'border-[var(--xbox-green)]/30 bg-[var(--xbox-green)]/5' : 'hover:border-white/10'}
-                              `}
+                        className={`flex items-center justify-between p-3 rounded cursor-pointer transition-colors border ${checkedItems[act.id] ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]' : 'bg-[var(--bg-tertiary)] border-transparent hover:border-[var(--border-subtle)]'}`}
                       >
-                        <span className="text-sm font-medium text-gray-300">{act.label}</span>
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${isChecked ? 'bg-[var(--xbox-green)] text-black' : 'bg-white/10 text-gray-400'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center ${checkedItems[act.id] ? 'bg-[var(--xbox-green)] border-[var(--xbox-green)] text-black' : 'border-[var(--text-muted)]'}`}>
+                            {checkedItems[act.id] && <Check className="w-3.5 h-3.5" />}
+                          </div>
+                          <span className={`text-sm ${checkedItems[act.id] ? 'text-white' : 'text-[var(--text-secondary)]'}`}>{act.label}</span>
+                        </div>
+                        <span className="text-xs font-mono text-[var(--text-muted)]">
                           +{act.points}
                         </span>
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
 
-                <div className="mt-6 p-4 bg-gradient-to-br from-[var(--xbox-green)]/10 to-transparent border border-[var(--xbox-green)]/20 rounded-lg">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Flame className="text-[var(--xbox-green)] w-5 h-5" />
-                    <span className="font-bold text-sm uppercase">Streak Status</span>
-                  </div>
-                  <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-[var(--xbox-green)]" style={{ width: '85%' }} />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">Mantenha a consistência para bônus máximos.</p>
-                </div>
               </div>
             </div>
-          </div>
 
+            {/* Right Column: Summary & Actions */}
+            <div className="space-y-6">
+
+              {/* Summary Card */}
+              <div className="xbox-card p-6 sticky top-6">
+                <h3 className="xbox-label mb-4">Resumo do Dia</h3>
+
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[var(--text-secondary)]">Pontos Totais</span>
+                  <span className="text-3xl font-bold text-white transition-all key={totals.total} animate-pulse-once">
+                    {totals.total}
+                  </span>
+                </div>
+
+                {/* Progress to Goal */}
+                <div className="mb-6">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-[var(--text-muted)]">Meta: {metaGoal}</span>
+                    <span className={metaBatida ? 'text-[var(--xbox-green)]' : 'text-[var(--text-muted)]'}>
+                      {Math.round((totals.total / metaGoal) * 100)}%
+                    </span>
+                  </div>
+                  <div className="xbox-progress">
+                    <div
+                      className={`xbox-progress-bar ${metaBatida ? 'bg-[var(--xbox-green)]' : 'bg-[var(--text-muted)]'}`}
+                      style={{ width: `${Math.min(100, (totals.total / metaGoal) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
+                  {/* Classification */}
+                  <div>
+                    <label className="xbox-label mb-2">Categoria Principal</label>
+                    <select
+                      className="xbox-input w-full"
+                      value={activityType}
+                      onChange={(e) => setActivityType(e.target.value)}
+                    >
+                      <option value="" disabled>Selecione...</option>
+                      <option value="Buscas">Buscas (PC/Mobile)</option>
+                      <option value="Xbox">Xbox / Game Pass</option>
+                      <option value="Quiz">Quiz / Diário</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="xbox-label mb-2">Notas (Opcional)</label>
+                    <textarea
+                      className="xbox-input w-full resize-none"
+                      rows={3}
+                      placeholder="Alguma observação?"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Manual Override */}
+                  <label className="flex items-center gap-3 p-3 bg-[var(--bg-tertiary)] rounded cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="xbox-checkbox"
+                      checked={metaOverride}
+                      onChange={(e) => setMetaOverride(e.target.checked)}
+                    />
+                    <span className="text-sm">Forçar "Meta Batida"</span>
+                  </label>
+
+                  <button
+                    onClick={handleSave}
+                    className="xbox-btn xbox-btn-primary w-full py-3 flex items-center justify-center gap-2"
+                    disabled={loading}
+                  >
+                    {loading ? 'Salvando...' : (
+                      <>
+                        <Save className="h-5 w-5" />
+                        Registrar Dia
+                      </>
+                    )}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
         </div>
       </main>
 
-      <RegistroModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        initialData={{
-          pc_busca: totals.pc_busca,
-          mobile_busca: totals.mobile_busca,
-          xbox: totals.xbox,
-          quiz: totals.quiz,
-          atividade: 'Rotina Diária',
-          meta_batida: grandTotal > 150
-        }}
-        isGuest={isGuest}
-        onSave={() => {
-          toast.success('Missão Cumprida! Dados registrados.', {
-            icon: '🎮',
-            style: { background: '#1a1c20', color: '#fff', border: '1px solid #107C10' }
-          })
-          if (user) fetchMonthlyStatus(user.id, currentDate.getMonth(), currentDate.getFullYear()).then(({ data }) => setMonthlyStatus(data || []))
-        }}
-      />
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setIsSidebarOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)]">
+            {/* Sidebar content copy for mobile */}
+            <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between">
+              <h1 className="text-xl font-bold text-[var(--xbox-green)] flex items-center gap-2">
+                <Gift className="h-6 w-6" />
+                Rewards
+              </h1>
+              <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-[var(--bg-tertiary)] rounded">
+                <CloseIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="p-4">
+              <ul className="space-y-1">
+                {navItems.map((item) => (
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setIsSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all ${item.active
+                        ? 'bg-[var(--bg-tertiary)] text-white'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                        }`}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <div className="p-4 border-t border-[var(--border-subtle)]">
+              <Link href="/" className="xbox-btn xbox-btn-ghost w-full text-sm flex items-center justify-center gap-2">
+                <LogOut className="h-4 w-4" /> Voltar
+              </Link>
+            </div>
+          </aside>
+        </div>
+      )}
+
     </div>
   )
 }

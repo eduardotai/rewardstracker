@@ -8,7 +8,6 @@ import { Tooltip as ReactTooltip } from 'react-tooltip'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchWeeklyRecords, fetchUserStats, fetchDailyRecords, DailyRecord } from '@/hooks/useData'
-import RegistroModal from './RegistroModal'
 import Badges from './Badges'
 import Leaderboard from './Leaderboard'
 import { REWARDS_LIMITS, ACTIVITIES_LIST } from '@/lib/rewards-constants'
@@ -39,7 +38,6 @@ interface GuestRecord {
 
 export default function Dashboard() {
   const { user, profile, loading, isGuest, signOut } = useAuth()
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Dynamic data states
@@ -216,99 +214,11 @@ export default function Dashboard() {
   const currentRecords = recentRecords.slice(indexOfFirstRecord, indexOfLastRecord)
 
 
-  // Optimistic Update Implementation
-  const handleSaveRecord = (newRecord: any) => {
-    // 1. Update Recent Records immediately
-    const updatedRecords = [newRecord, ...recentRecords]
-    setRecentRecords(updatedRecords)
+  // Optimistic Update Implementation (Moved to Atividades Page mostly, but kept if needed for other updates)
+  // For dashboard, we just rely on data reloading or swr/react-query in future.
+  // Ideally, navigating back to dashboard triggers re-fetch or we use global state.
 
-    // 2. Update Stats (Points & Average)
-    const newTotalSaldo = stats.totalSaldo + newRecord.total_pts
-    const newMedia = Math.round(newTotalSaldo / updatedRecords.length)
 
-    // 3. Update Streak (Strict Logic Re-calculated)
-    // We can reuse the same logic or just increment if it's a new day. 
-    // For simplicity and accuracy, let's re-run the streak calc on the new list.
-    const sortedForStreak = [...updatedRecords]
-      .filter(r => r.meta_batida)
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-
-    let streak = 0
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    let lastDate: Date | null = null
-
-    for (const record of sortedForStreak) {
-      const recordDateParts = record.data.split('T')[0].split('-')
-      const recordDate = new Date(
-        parseInt(recordDateParts[0]),
-        parseInt(recordDateParts[1]) - 1,
-        parseInt(recordDateParts[2])
-      )
-      recordDate.setHours(0, 0, 0, 0)
-
-      if (lastDate === null) {
-        const diffTime = today.getTime() - recordDate.getTime()
-        const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
-        if (diffDays <= 1) {
-          streak++
-          lastDate = recordDate
-        } else { break }
-      } else {
-        const diffTime = lastDate.getTime() - recordDate.getTime()
-        const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
-        if (diffDays === 0) continue
-        if (diffDays === 1) {
-          streak++
-          lastDate = recordDate
-        } else { break }
-      }
-    }
-
-    setStats({
-      totalSaldo: newTotalSaldo,
-      mediaDiaria: newMedia,
-      streak: streak
-    })
-
-    // 4. Update Weekly Chart (If record date is within last 7 days)
-    const recordDateShort = new Date(newRecord.data).toLocaleDateString('pt-BR', { weekday: 'short' })
-    const todayShort = new Date().toLocaleDateString('pt-BR', { weekday: 'short' })
-
-    // If it's today (most likely), update the chart entry
-    setWeeklyData(prev => {
-      const newData = [...prev]
-      const todayIndex = newData.findIndex(d => d.day === recordDateShort)
-      if (todayIndex >= 0) {
-        // Create a copy of the object before modifying it
-        newData[todayIndex] = {
-          ...newData[todayIndex],
-          pts: newData[todayIndex].pts + newRecord.total_pts
-        }
-      } else if (newData.length < 7) {
-        // Optional: Add new day if space
-        newData.push({ day: recordDateShort, pts: newRecord.total_pts })
-      }
-      return newData
-    })
-
-    // 5. Invalidate Cache (Background)
-    if (user) {
-      import('@/hooks/useData').then(({ invalidateCache }) => {
-        invalidateCache(user.id)
-        // We DON'T need to re-fetch immediately because we just verified our data is correct locally.
-        // But we can trigger a silent re-fetch in background if desired.
-      })
-    }
-  }
-
-  // Reload data when modal closes (Secondary safety, mostly for Guest)
-  const handleModalClose = () => {
-    setIsModalOpen(false)
-    if (isGuest) {
-      loadGuestData()
-    }
-  }
 
   const handleSignOut = async () => {
     // Clear guest cookie
@@ -671,15 +581,15 @@ export default function Dashboard() {
 
           {/* Floating Action Button */}
           <div className="fixed bottom-8 right-8">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="xbox-btn xbox-btn-primary px-6 py-4 text-lg animate-pulse-glow"
+            <Link
+              href="/atividades"
+              className="xbox-btn xbox-btn-primary px-6 py-4 text-lg animate-pulse-glow flex items-center gap-2"
               data-tooltip-id="log-tooltip"
               data-tooltip-content="Registre suas atividades diárias"
             >
               <Plus className="h-5 w-5" />
               Registrar Dia
-            </button>
+            </Link>
           </div>
         </div>
       </main>
@@ -692,12 +602,7 @@ export default function Dashboard() {
       <ReactTooltip id="daily-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
       <ReactTooltip id="log-tooltip" place="left" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
 
-      <RegistroModal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        onSave={handleSaveRecord}
-        isGuest={isGuest}
-      />
+
     </div>
   )
 }
