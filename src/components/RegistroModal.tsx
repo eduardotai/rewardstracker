@@ -185,20 +185,48 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
             {errors.data && <p className="text-[var(--error)] text-xs mt-1">{errors.data.message}</p>}
           </div>
 
-          {/* Atividade */}
+          {/* Tipo de Atividade - Visual Cards */}
           <div>
-            <label className="xbox-label">Tipo de Atividade</label>
-            <select
-              {...register('atividade')}
-              className="xbox-input xbox-select"
-            >
-              <option value="">Selecione uma atividade...</option>
-              <option value="Buscas">🔍 Buscas no PC/Mobile</option>
-              <option value="Quiz">🧠 Quiz Diário</option>
-              <option value="Xbox">🎮 Missões Xbox</option>
-              <option value="Outros">📝 Outros</option>
-            </select>
-            {errors.atividade && <p className="text-[var(--error)] text-xs mt-1">{errors.atividade.message}</p>}
+            <label className="xbox-label mb-3">Tipo de Atividade</label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: 'Buscas', icon: Monitor, label: 'Buscas', desc: 'PC & Mobile' },
+                { id: 'Quiz', icon: Brain, label: 'Ativ. Web', desc: 'Quiz, News' },
+                { id: 'Xbox', icon: Gamepad2, label: 'Xbox/GP', desc: 'App, Console' },
+                { id: 'Outros', icon: Plus, label: 'Outros', desc: 'Extras' },
+              ].map((type) => {
+                const isSelected = watchedValues.atividade === type.id
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setValue('atividade', type.id)}
+                    className={`p-3 rounded border text-left transition-all duration-200 group relative overflow-hidden ${isSelected
+                      ? 'bg-[var(--xbox-green)]/20 border-[var(--xbox-green)] shadow-[0_0_15px_rgba(16,124,16,0.3)]'
+                      : 'bg-[var(--bg-tertiary)] border-[var(--border-subtle)] hover:border-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'
+                      }`}
+                  >
+                    {/* Glow effect on hover/select */}
+                    {isSelected && <div className="absolute inset-0 bg-gradient-to-tr from-[var(--xbox-green)]/10 to-transparent pointer-events-none" />}
+
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className={`p-2 rounded-full ${isSelected ? 'bg-[var(--xbox-green)] text-white' : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] group-hover:text-white'}`}>
+                        <type.icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className={`font-semibold text-sm ${isSelected ? 'text-white' : 'text-[var(--text-secondary)] group-hover:text-white'}`}>
+                          {type.label}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">
+                          {type.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            {errors.atividade && <p className="text-[var(--error)] text-xs mt-2 ml-1">{errors.atividade.message}</p>}
           </div>
 
           {/* Meta Diária Configurável */}
@@ -319,18 +347,37 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
           </div>
 
           {/* Total de Pontos */}
-          <div className={`p-4 rounded border ${metaAlcancada ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]/30' : 'bg-[var(--bg-tertiary)] border-[var(--border-subtle)]'}`}>
-            <div className="flex justify-between items-center">
+          <div className={`relative p-6 rounded-lg border transition-all duration-300 overflow-hidden ${metaAlcancada
+              ? 'bg-gradient-to-br from-[var(--xbox-green)]/20 to-[var(--bg-secondary)] border-[var(--xbox-green)] shadow-[0_0_20px_rgba(16,124,16,0.2)]'
+              : 'bg-[var(--bg-tertiary)] border-[var(--border-subtle)]'
+            }`}>
+            <div className="flex justify-between items-center relative z-10">
               <div>
-                <span className="xbox-label">Total de Pontos</span>
+                <span className="xbox-label mb-1">Total de Pontos</span>
+                <div className={`text-sm flex items-center gap-1.5 ${metaAlcancada ? 'text-[var(--xbox-green)]' : 'text-[var(--text-muted)]'}`}>
+                  <Target className="h-3 w-3" />
+                  Meta: {metaDiaria}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className={`block text-5xl font-bold tracking-tighter transition-all ${metaAlcancada
+                    ? 'text-[var(--xbox-green)] drop-shadow-[0_0_10px_rgba(16,124,16,0.5)] scale-110'
+                    : 'text-white'
+                  }`}>
+                  {totalPts}
+                </span>
                 {metaAlcancada && (
-                  <p className="text-xs text-[var(--xbox-green)] mt-1">✓ Meta de {metaDiaria} pontos alcançada!</p>
+                  <span className="text-xs font-bold text-[var(--xbox-green)] uppercase tracking-widest animate-pulse">
+                    Meta Batida!
+                  </span>
                 )}
               </div>
-              <span className={`text-3xl font-bold ${metaAlcancada ? 'text-[var(--xbox-green)]' : 'text-white'}`}>
-                {totalPts}
-              </span>
             </div>
+
+            {/* Dynamic Background Effect */}
+            {metaAlcancada && (
+              <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-[var(--xbox-green)]/20 blur-3xl rounded-full pointer-events-none" />
+            )}
           </div>
 
           {/* Buttons */}
@@ -338,7 +385,7 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
             <button
               type="submit"
               disabled={isSubmitting}
-              className="xbox-btn xbox-btn-primary flex-1 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="xbox-btn xbox-btn-primary flex-1 py-4 text-base shadow-lg shadow-black/20"
             >
               {isSubmitting ? (
                 <>
@@ -346,13 +393,13 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
                   Salvando...
                 </>
               ) : (
-                '💾 Salvar Registro'
+                'Confirmar e Salvar'
               )}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="xbox-btn xbox-btn-outline"
+              className="xbox-btn xbox-btn-outline px-6"
             >
               Cancelar
             </button>
