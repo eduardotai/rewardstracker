@@ -79,15 +79,40 @@ export default function Dashboard() {
         .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
 
       let streak = 0
-      let currentDate = new Date()
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      let lastDate: Date | null = null
+
       for (const record of sortedRecords) {
-        const recordDate = new Date(record.data)
-        const diffDays = Math.floor((currentDate.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24))
-        if (diffDays <= 1) {
-          streak++
-          currentDate = recordDate
+        const recordDateParts = record.data.split('T')[0].split('-')
+        const recordDate = new Date(
+          parseInt(recordDateParts[0]),
+          parseInt(recordDateParts[1]) - 1,
+          parseInt(recordDateParts[2])
+        )
+        recordDate.setHours(0, 0, 0, 0)
+
+        if (lastDate === null) {
+          const diffTime = today.getTime() - recordDate.getTime()
+          const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+
+          if (diffDays <= 1) {
+            streak++
+            lastDate = recordDate
+          } else {
+            break
+          }
         } else {
-          break
+          const diffTime = lastDate.getTime() - recordDate.getTime()
+          const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+
+          if (diffDays === 1) {
+            streak++
+            lastDate = recordDate
+          } else {
+            break
+          }
         }
       }
 

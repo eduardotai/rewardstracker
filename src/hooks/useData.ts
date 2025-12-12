@@ -156,19 +156,62 @@ export async function fetchUserStats(userId: string) {
         const totalSaldo = records.reduce((sum, r) => sum + (r.total_pts || 0), 0)
         const mediaDiaria = records.length > 0 ? Math.round(totalSaldo / records.length) : 0
 
-        // Calculate streak
-        const sorted = [...records].filter(r => r.meta_batida).sort((a, b) => b.data.localeCompare(a.data))
+        // Calculate streak strictly
+        // Streak rules:
+        // 1. Must be consecutive days (gap of 1 day max between records)
+        // 2. "Today" counts if meta is met.
+        // 3. If "Today" is not logged yet, "Yesterday" keeps the streak alive.
+        // 4. If gap >= 2 days (e.g. last record was day before yesterday), streak is broken (0, unless today is logged).
+
+        // Sort records by date descending (newest first)
+        const sorted = [...records]
+            .filter(r => r.meta_batida) // Only count days where meta was met
+            .sort((a, b) => b.data.localeCompare(a.data))
+
         let streak = 0
-        let currentDate = new Date()
+        const today = new Date()
+        today.setHours(0, 0, 0, 0) // Normalize today to 00:00:00
+
+        let lastDate: Date | null = null
 
         for (const record of sorted) {
-            const recordDate = new Date(record.data)
-            const diffDays = Math.floor((currentDate.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24))
-            if (diffDays <= 1) {
-                streak++
-                currentDate = recordDate
+            // Parse record date (assuming YYYY-MM-DD format from Supabase dates)
+            // Note: splitting 'T' handles both ISO timestamps and simple dates
+            const recordDateParts = record.data.split('T')[0].split('-')
+            const recordDate = new Date(
+                parseInt(recordDateParts[0]),
+                parseInt(recordDateParts[1]) - 1,
+                parseInt(recordDateParts[2])
+            )
+            recordDate.setHours(0, 0, 0, 0)
+
+            // Calculate difference in days from the "reference" date
+            // For the first item, reference is Today. For subsequent, it's the previous recordDate.
+            if (lastDate === null) {
+                // First valid record found.
+                // Check if it is Today or Yesterday. If older, streak is broken immediately (unless we want to show 0).
+                const diffTime = today.getTime() - recordDate.getTime()
+                const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+
+                if (diffDays <= 1) { // 0 (Today) or 1 (Yesterday)
+                    streak++
+                    lastDate = recordDate
+                } else {
+                    // Last valid record is too old (2+ days ago). Streak is 0.
+                    break
+                }
             } else {
-                break
+                // Check consecutiveness with previous record in the loop
+                const diffTime = lastDate.getTime() - recordDate.getTime()
+                const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+
+                if (diffDays === 1) {
+                    streak++
+                    lastDate = recordDate
+                } else {
+                    // Gap found (e.g. skipped a day)
+                    break
+                }
             }
         }
 
