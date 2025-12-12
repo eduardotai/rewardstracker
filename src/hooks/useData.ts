@@ -52,8 +52,41 @@ export interface Resgate {
     user_id?: string
 }
 
+// Simple in-memory cache
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const dataCache: {
+    dailyRecords: { [userId: string]: { data: DailyRecord[], timestamp: number } }
+    resgates: { [userId: string]: { data: Resgate[], timestamp: number } }
+    stats: { [userId: string]: { data: any, timestamp: number } }
+    leaderboard: { data: LeaderboardUser[], timestamp: number } | null
+} = {
+    dailyRecords: {},
+    resgates: {},
+    stats: {},
+    leaderboard: null
+}
+
+export function invalidateCache(userId: string) {
+    if (dataCache.dailyRecords[userId]) delete dataCache.dailyRecords[userId]
+    if (dataCache.resgates[userId]) delete dataCache.resgates[userId]
+    if (dataCache.stats[userId]) delete dataCache.stats[userId]
+    dataCache.leaderboard = null
+}
+
 // Fetch user's daily records
 export async function fetchDailyRecords(userId: string, limit?: number) {
+    const cacheKey = userId
+    const cached = dataCache.dailyRecords[cacheKey]
+
+    // Return cached data if valid
+    // If we have a full list cached, we can satisfy ANY limit request by slicing
+    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+        if (limit) {
+            return { data: cached.data.slice(0, limit), error: null }
+        }
+        return { data: cached.data, error: null }
+    }
+
     let query = supabase
         .from('registros_diarios')
         .select('*')
@@ -65,11 +98,35 @@ export async function fetchDailyRecords(userId: string, limit?: number) {
     }
 
     const { data, error } = await withTimeout(() => query)
+
+    // Cache the full result if it wasn't limited, or if we can handle merging later
+    // For now, only cache if no limit (full list) to avoid complexity
+    if (!limit && data) {
+        dataCache.dailyRecords[cacheKey] = {
+            data: data as DailyRecord[],
+            timestamp: Date.now()
+        }
+    }
+
     return { data: data as DailyRecord[] | null, error }
 }
 
 // Fetch records for last N days
 export async function fetchWeeklyRecords(userId: string) {
+    // Use full daily records cache if available to filter locally
+    const cachedFull = dataCache.dailyRecords[userId]
+    if (cachedFull && (Date.now() - cachedFull.timestamp < CACHE_DURATION)) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        const cutoff = sevenDaysAgo.toISOString().split('T')[0]
+
+        const filtered = cachedFull.data
+            .filter(r => r.data >= cutoff)
+            .sort((a, b) => a.data.localeCompare(b.data)) // Ascending for chart
+
+        return { data: filtered, error: null }
+    }
+
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
@@ -86,6 +143,40 @@ export async function fetchWeeklyRecords(userId: string) {
 
 // Get user stats
 export async function fetchUserStats(userId: string) {
+    // Check cache (Stats specific or derived from DailyRecords)
+    const cachedStats = dataCache.stats[userId]
+    if (cachedStats && (Date.now() - cachedStats.timestamp < CACHE_DURATION)) {
+        return cachedStats.data
+    }
+
+    // Optimization: If we have full daily records cached, derive stats from there!
+    const cachedDaily = dataCache.dailyRecords[userId]
+    if (cachedDaily && (Date.now() - cachedDaily.timestamp < CACHE_DURATION)) {
+        const records = cachedDaily.data
+        const totalSaldo = records.reduce((sum, r) => sum + (r.total_pts || 0), 0)
+        const mediaDiaria = records.length > 0 ? Math.round(totalSaldo / records.length) : 0
+
+        // Calculate streak
+        const sorted = [...records].filter(r => r.meta_batida).sort((a, b) => b.data.localeCompare(a.data))
+        let streak = 0
+        let currentDate = new Date()
+
+        for (const record of sorted) {
+            const recordDate = new Date(record.data)
+            const diffDays = Math.floor((currentDate.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24))
+            if (diffDays <= 1) {
+                streak++
+                currentDate = recordDate
+            } else {
+                break
+            }
+        }
+
+        const stats = { totalSaldo, streak, mediaDiaria }
+        dataCache.stats[userId] = { data: stats, timestamp: Date.now() }
+        return stats
+    }
+
     const { data: records, error } = await withTimeout(() => supabase
         .from('registros_diarios')
         .select('total_pts, meta_batida, data')
@@ -122,17 +213,37 @@ export async function fetchUserStats(userId: string) {
         }
     }
 
-    return { totalSaldo, streak, mediaDiaria }
+    const stats = { totalSaldo, streak, mediaDiaria }
+
+    // Update cache
+    dataCache.stats[userId] = {
+        data: stats,
+        timestamp: Date.now()
+    }
+
+    return stats
 }
 
 // Fetch resgates
 export async function fetchResgates(userId: string) {
+    const cached = dataCache.resgates[userId]
+    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+        return { data: cached.data, error: null }
+    }
+
     const { data, error } = await withTimeout(() => supabase
         .from('resgates')
         .select('*')
         .eq('user_id', userId)
         .order('data', { ascending: false })
     )
+
+    if (data) {
+        dataCache.resgates[userId] = {
+            data: data as Resgate[],
+            timestamp: Date.now()
+        }
+    }
 
     return { data: data as Resgate[] | null, error }
 }
@@ -145,6 +256,10 @@ export async function insertDailyRecord(userId: string, record: Omit<DailyRecord
         .select()
         .single()
 
+    if (!error) {
+        invalidateCache(userId)
+    }
+
     return { data, error }
 }
 
@@ -155,6 +270,10 @@ export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' 
         .insert([{ ...resgate, user_id: userId }])
         .select()
         .single()
+
+    if (!error) {
+        invalidateCache(userId)
+    }
 
     return { data, error }
 }
@@ -170,6 +289,11 @@ export interface LeaderboardUser {
 
 // Fetch dynamic leaderboard data
 export async function fetchLeaderboardData(currentUserId?: string) {
+    // Check cache
+    if (dataCache.leaderboard && (Date.now() - dataCache.leaderboard.timestamp < CACHE_DURATION)) {
+        return dataCache.leaderboard.data
+    }
+
     try {
         // Fetch profiles and records in parallel to verify performance
         const thirtyDaysAgo = new Date()
@@ -221,10 +345,18 @@ export async function fetchLeaderboardData(currentUserId?: string) {
         }))
 
         // 5. Sort by points (descending) and assign rank
-        return leaderboard
+        const sortedLeaderboard = leaderboard
             .sort((a, b) => b.pts - a.pts)
             .map((user, index) => ({ ...user, rank: index + 1 }))
             .slice(0, 10)
+
+        // Update cache
+        dataCache.leaderboard = {
+            data: sortedLeaderboard,
+            timestamp: Date.now()
+        }
+
+        return sortedLeaderboard
     } catch (error) {
         console.error('Leaderboard fetch timed out or failed', error)
         return []

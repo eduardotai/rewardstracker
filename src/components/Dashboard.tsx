@@ -115,13 +115,14 @@ export default function Dashboard() {
 
       try {
         // Fetch all data in parallel
+        // Note: We fetch ALL daily records (no limit) to warm the cache for other pages/tabs
         const [weeklyRes, recentRes, userStats] = await Promise.all([
           fetchWeeklyRecords(user.id),
-          fetchDailyRecords(user.id, 10),
+          fetchDailyRecords(user.id),
           fetchUserStats(user.id)
         ])
 
-        // Process Weekly
+        // Process Weekly (Chart)
         if (weeklyRes.data) {
           const chartData = weeklyRes.data.map(r => ({
             day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
@@ -130,9 +131,9 @@ export default function Dashboard() {
           setWeeklyData(chartData)
         }
 
-        // Process Recent
+        // Process Recent (Table - Slice 10)
         if (recentRes.data) {
-          setRecentRecords(recentRes.data)
+          setRecentRecords(recentRes.data.slice(0, 10))
         }
 
         // Process Stats
