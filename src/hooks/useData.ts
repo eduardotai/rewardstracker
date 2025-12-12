@@ -205,6 +205,10 @@ export async function fetchUserStats(userId: string) {
                 const diffTime = lastDate.getTime() - recordDate.getTime()
                 const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
 
+                if (diffDays === 0) {
+                    continue // Same day, multiple records. Skip this one, keep looking back.
+                }
+
                 if (diffDays === 1) {
                     streak++
                     lastDate = recordDate

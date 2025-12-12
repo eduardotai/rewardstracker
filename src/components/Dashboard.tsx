@@ -107,6 +107,10 @@ export default function Dashboard() {
           const diffTime = lastDate.getTime() - recordDate.getTime()
           const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
 
+          if (diffDays === 0) {
+            continue // Same day, skip
+          }
+
           if (diffDays === 1) {
             streak++
             lastDate = recordDate
