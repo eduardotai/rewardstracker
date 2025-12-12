@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { Trophy, TrendingUp, Calendar, Target, Plus, Gift, BarChart3, Menu, X as CloseIcon, Home, Activity, PiggyBank, User, LogOut } from 'lucide-react'
 import { Tooltip as ReactTooltip } from 'react-tooltip'
@@ -205,17 +206,17 @@ export default function Dashboard() {
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.label}>
-                <a
+                <Link
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
-                      ? 'bg-[var(--bg-tertiary)] text-white'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                    ? 'bg-[var(--bg-tertiary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
                     }`}
                 >
                   {item.active && <span className="xbox-nav-indicator" />}
                   <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -262,8 +263,8 @@ export default function Dashboard() {
                     <a
                       href={item.href}
                       className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
-                          ? 'bg-[var(--bg-tertiary)] text-white'
-                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                        ? 'bg-[var(--bg-tertiary)] text-white'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
                         }`}
                     >
                       {item.active && <span className="xbox-nav-indicator" />}
