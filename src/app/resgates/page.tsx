@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Plus, Calculator, Home, Activity, BarChart3, PiggyBank, User, Gift, Menu, X as CloseIcon, CreditCard, Trash2 } from 'lucide-react'
 import ResgateModal from '@/components/ResgateModal'
 import { useAuth } from '@/contexts/AuthContext'
-import { fetchResgates, Resgate } from '@/hooks/useData'
+import { fetchResgates, fetchUserStats, Resgate } from '@/hooks/useData'
 import toast from 'react-hot-toast'
 
 const navItems = [
@@ -32,25 +32,36 @@ export default function ResgatesPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [resgates, setResgates] = useState<DisplayResgate[]>([])
   const [loading, setLoading] = useState(true)
+  const [userStats, setUserStats] = useState({ totalSaldo: 0, mediaDiaria: 0 })
 
-  // Load resgates on mount
+  // Load resgates AND stats on mount
   useEffect(() => {
     const loadData = async () => {
       if (authLoading) return
 
       try {
         if (isGuest && guestData) {
-          // Load from guest data context
-          // Ensure guest IDs are treated correctly (legacy might be numbers, new are UUID strings)
+          // Basic guest stats calculation
+          const records = guestData.registros || []
+          const totalEarned = records.reduce((sum, r) => sum + (r.total_pts || 0), 0)
+          const totalSpent = (guestData.resgates || []).reduce((sum, r) => sum + r.pts_usados, 0)
+          const currentBalance = totalEarned - totalSpent
+          const media = records.length > 0 ? Math.round(totalEarned / records.length) : 0
+
           setResgates(guestData.resgates || [])
+          setUserStats({ totalSaldo: currentBalance, mediaDiaria: media })
           setLoading(false)
         } else if (user) {
-          // Load from Supabase for authenticated users
-          const { data, error } = await fetchResgates(user.id)
-          if (error) throw error
+          // Load from Supabase
+          const [resgatesRes, statsRes] = await Promise.all([
+            fetchResgates(user.id),
+            fetchUserStats(user.id)
+          ])
 
-          if (data) {
-            setResgates(data.map(r => ({
+          if (resgatesRes.error) throw resgatesRes.error
+
+          if (resgatesRes.data) {
+            setResgates(resgatesRes.data.map(r => ({
               id: r.id,
               data: r.data,
               item: r.item,
@@ -59,14 +70,16 @@ export default function ResgatesPage() {
               custo_efetivo: r.custo_efetivo,
             })))
           }
+
+          // Stats
+          setUserStats(statsRes)
           setLoading(false)
         } else {
           setLoading(false)
         }
       } catch (error) {
         console.error('Error loading resgates:', error)
-        toast.error('Erro ao carregar dados. Verifique sua conexão.')
-        // Ensure loading state is cleared even on error so UI doesn't freeze
+        toast.error('Erro ao carregar dados.')
         setLoading(false)
       }
     }
@@ -134,8 +147,6 @@ export default function ResgatesPage() {
     const today = new Date().toISOString().split('T')[0]
 
     // Create resgate object
-    // Create resgate object with temp ID for optimistic update
-    // We use crypto.randomUUID() to match Supabase's UUID type expectations
     const tempId = crypto.randomUUID()
     const newResgate = {
       id: tempId,
@@ -146,17 +157,10 @@ export default function ResgatesPage() {
       custo_efetivo: data.custo_efetivo,
     }
 
-    // We pass the full object with ID now, but addResgate expects Omit<id>, 
-    // however our simplified logic in addResgate will handle it (by ignoring passed ID if spread, or we adjust call)
-    // Actually, let's fix addResgate to be flexible or just pass without ID and let it decide?
-    // Current addResgate implementation overrides ID. That's bad for optimistic updates where WE want to control ID.
-    // Let's modify addResgate to take an optional ID or full object.
-
-    // For now, to keep it simple and working with the previous change:
     addResgate({
       ...newResgate,
-      id: tempId // Explicitly pass it, we need to update addResgate signature in next step if it's strict
-    } as any) // Temporary cast to bypass strict Omit<id> check until we refactor addResgate signature fully safe
+      id: tempId
+    } as any)
     setIsModalOpen(false)
     toast.success('Resgate adicionado!')
 
@@ -351,6 +355,8 @@ export default function ResgatesPage() {
         onClose={handleModalClose}
         onSave={handleSaveResgate}
         mode={modalMode}
+        currentPoints={userStats.totalSaldo}
+        dailyAverage={userStats.mediaDiaria}
       />
     </div>
   )

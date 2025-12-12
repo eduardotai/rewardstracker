@@ -11,6 +11,7 @@ import { fetchWeeklyRecords, fetchUserStats, fetchDailyRecords, DailyRecord } fr
 import RegistroModal from './RegistroModal'
 import Badges from './Badges'
 import Leaderboard from './Leaderboard'
+import { REWARDS_LIMITS, ACTIVITIES_LIST } from '@/lib/rewards-constants'
 
 const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
 
@@ -49,6 +50,25 @@ export default function Dashboard() {
 
   const metaMensal = profile?.meta_mensal || 12000
   const progress = Math.min(Math.round((stats.totalSaldo / metaMensal) * 100), 100)
+
+  // Calculate Daily Progress based on official limits
+  const today = new Date().toISOString().split('T')[0]
+  const todaysRecord = recentRecords.find(r => r.data.startsWith(today))
+
+  // Use profile level or default to 2
+  const userLevel = profile?.level || 2
+  const limits = userLevel === 1 ? REWARDS_LIMITS.LEVEL_1 : REWARDS_LIMITS.LEVEL_2
+
+  // Extract points from today's record (or 0 if none)
+  // Note: GuestRecord/DailyRecord types might need updating to track specific categories if they don't already
+  // For now, we assume 'pc_busca' and 'mobile_busca' are tracked fields in DailyRecord
+  const pcPoints = todaysRecord?.pc_busca || 0
+  const mobilePoints = todaysRecord?.mobile_busca || 0
+
+  // Total Daily Potential (Search + Bonuses) -> Simplified view
+  const maxSearchPoints = limits.PC_SEARCH + limits.MOBILE_SEARCH
+  const currentSearchPoints = pcPoints + mobilePoints
+  const searchProgress = maxSearchPoints > 0 ? Math.min(100, Math.round((currentSearchPoints / maxSearchPoints) * 100)) : 0
 
   // Load guest data from localStorage
   const loadGuestData = useCallback(() => {
@@ -491,6 +511,23 @@ export default function Dashboard() {
                 {dataLoading ? '---' : stats.mediaDiaria} <span className="text-sm text-[var(--text-muted)]">pts</span>
               </p>
             </div>
+
+            {/* Card Daily Goal (New) */}
+            <div className="xbox-card p-6" data-tooltip-id="daily-tooltip" data-tooltip-content={`Buscas: ${currentSearchPoints}/${maxSearchPoints} pts`}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
+                  <Activity className="h-5 w-5 text-[var(--xbox-green)]" />
+                </div>
+                <span className="text-sm font-semibold text-[var(--xbox-green)]">{searchProgress}%</span>
+              </div>
+              <p className="xbox-label">Meta Diária (Buscas)</p>
+              <div className="xbox-progress mt-2">
+                <div className="xbox-progress-bar" style={{ width: `${searchProgress}%` }} />
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mt-2">
+                PC: {pcPoints}/{limits.PC_SEARCH} | Mob: {mobilePoints}/{limits.MOBILE_SEARCH}
+              </p>
+            </div>
           </div>
 
           {/* Chart Section */}
@@ -652,6 +689,7 @@ export default function Dashboard() {
       <ReactTooltip id="progress-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
       <ReactTooltip id="streak-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
       <ReactTooltip id="media-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
+      <ReactTooltip id="daily-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
       <ReactTooltip id="log-tooltip" place="left" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
 
       <RegistroModal

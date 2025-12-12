@@ -12,6 +12,7 @@ interface UserProfile {
     email: string
     display_name: string
     tier: string
+    level: 1 | 2 // New field for Rewards Level
     meta_mensal: number
     created_at: string
 }
@@ -54,6 +55,7 @@ interface GuestData {
     profile: {
         display_name: string
         tier: string
+        level: 1 | 2 // New field for Guest Level
         meta_mensal: number
     }
 }
@@ -81,6 +83,7 @@ const defaultGuestData: GuestData = {
     profile: {
         display_name: 'Visitante',
         tier: 'Sem',
+        level: 2, // Default to Level 2
         meta_mensal: 12000,
     }
 }
@@ -114,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: userEmail,
                 display_name: userEmail.split('@')[0],
                 tier: 'Sem',
+                level: 2, // Default to Level 2
                 meta_mensal: 12000,
             }
 
@@ -124,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .single()
 
             if (!createError && createdProfile) {
-                setProfile(createdProfile)
+                setProfile(createdProfile as UserProfile) // Cast to ensure level is recognized
             } else {
                 console.error('Error creating profile:', createError)
             }

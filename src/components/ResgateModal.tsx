@@ -20,6 +20,8 @@ interface ResgateModalProps {
   onClose: () => void
   onSave: (data: ResgateForm & { custo_efetivo: number }) => void
   mode: 'add' | 'simulate'
+  currentPoints?: number
+  dailyAverage?: number
 }
 
 const inventory = [
@@ -29,7 +31,7 @@ const inventory = [
   { name: 'R$50 Amazon Gift Card', pts: 5250, brl: 50 },
 ]
 
-export default function ResgateModal({ isOpen, onClose, onSave, mode }: ResgateModalProps) {
+export default function ResgateModal({ isOpen, onClose, onSave, mode, currentPoints = 0, dailyAverage = 0 }: ResgateModalProps) {
   const [selectedItem, setSelectedItem] = useState('')
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ResgateForm>({
@@ -142,7 +144,7 @@ export default function ResgateModal({ isOpen, onClose, onSave, mode }: ResgateM
 
           {/* Custo Efetivo */}
           {watchedPts > 0 && watchedBrl > 0 && (
-            <div className="p-4 rounded border border-[var(--xbox-green)]/30 bg-[var(--xbox-green)]/10">
+            <div className="p-4 rounded border border-[var(--xbox-green)]/30 bg-[var(--xbox-green)]/10 space-y-3">
               <div className="flex items-center gap-3">
                 <Calculator className="h-5 w-5 text-[var(--xbox-green)]" />
                 <div>
@@ -150,6 +152,35 @@ export default function ResgateModal({ isOpen, onClose, onSave, mode }: ResgateM
                   <p className="text-lg font-bold text-[var(--xbox-green)]">{custoEfetivo} pts <span className="text-sm font-normal text-[var(--text-secondary)]">por R$1</span></p>
                 </div>
               </div>
+
+              {/* Time to Goal Projection */}
+              {mode === 'simulate' && dailyAverage > 0 && (
+                <div className="pt-3 border-t border-[var(--xbox-green)]/30">
+                  {watchedPts <= currentPoints ? (
+                    <p className="text-[var(--xbox-green)] font-semibold">✓ Você já tem pontos suficientes!</p>
+                  ) : (
+                    (() => {
+                      const needed = watchedPts - currentPoints
+                      const days = Math.ceil(needed / dailyAverage)
+                      const date = new Date()
+                      date.setDate(date.getDate() + days)
+                      return (
+                        <>
+                          <p className="text-sm text-white mb-1">
+                            Faltam <span className="font-bold">{needed.toLocaleString()} pts</span>
+                          </p>
+                          <p className="text-sm text-[var(--text-secondary)]">
+                            Com sua média de {dailyAverage} pts/dia, você alcançará em:
+                          </p>
+                          <p className="text-lg font-bold text-white mt-1">
+                            {days} dias <span className="text-sm font-normal text-[var(--text-muted)]">({date.toLocaleDateString('pt-BR')})</span>
+                          </p>
+                        </>
+                      )
+                    })()
+                  )}
+                </div>
+              )}
             </div>
           )}
 

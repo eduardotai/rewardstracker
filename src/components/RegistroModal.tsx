@@ -27,22 +27,38 @@ interface RegistroModalProps {
   onClose: () => void
   onSave?: (record: any) => void
   isGuest?: boolean
+  initialData?: Partial<RegistroForm> // Allow pre-filling data
 }
 
-export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false }: RegistroModalProps) {
+export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false, initialData }: RegistroModalProps) {
   const [metaDiaria, setMetaDiaria] = useState(150)
+
+  // Merge default values with initialData if provided
+  const defaults = {
+    data: new Date().toISOString().split('T')[0],
+    pc_busca: 0,
+    mobile_busca: 0,
+    quiz: 0,
+    xbox: 0,
+    meta_batida: false,
+    atividade: '', // Default empty
+    ...initialData // Override with passed data
+  }
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
-    defaultValues: {
-      data: new Date().toISOString().split('T')[0],
-      pc_busca: 0,
-      mobile_busca: 0,
-      quiz: 0,
-      xbox: 0,
-      meta_batida: false,
-    }
+    defaultValues: defaults
   })
+
+  // Reset form when initialData changes or modal opens
+  useEffect(() => {
+    if (isOpen && initialData) {
+      reset({
+        ...defaults,
+        ...initialData
+      })
+    }
+  }, [isOpen, initialData, reset])
 
   const watchedValues = watch()
 
