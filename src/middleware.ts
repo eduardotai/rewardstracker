@@ -22,6 +22,12 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next()
     }
 
+    // Check for guest mode cookie (set by client)
+    const guestMode = request.cookies.get('rewards_guest_mode')?.value === 'true'
+    if (guestMode) {
+        return NextResponse.next()
+    }
+
     // Create a response to modify
     let response = NextResponse.next({
         request: {
@@ -65,13 +71,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public folder
-         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }

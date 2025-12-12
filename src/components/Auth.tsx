@@ -1,17 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { supabase } from '@/lib/supabase'
-import { Gift } from 'lucide-react'
+import { Gift, UserX } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function AuthComponent() {
+  const router = useRouter()
+  const { enterAsGuest } = useAuth()
   const [redirectTo, setRedirectTo] = useState('')
 
   useEffect(() => {
     setRedirectTo(`${window.location.origin}/auth/callback`)
   }, [])
+
+  const handleGuestMode = () => {
+    // Set cookie for middleware
+    document.cookie = 'rewards_guest_mode=true; path=/; max-age=31536000'
+    enterAsGuest()
+    router.push('/')
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -86,7 +97,7 @@ export default function AuthComponent() {
                 label: 'auth-label',
               },
             }}
-            providers={['google', 'azure']}
+            providers={[]}
             redirectTo={redirectTo}
             localization={{
               variables: {
@@ -115,6 +126,25 @@ export default function AuthComponent() {
               },
             }}
           />
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-[var(--border-subtle)]" />
+            <span className="text-xs text-[var(--text-muted)] uppercase">ou</span>
+            <div className="flex-1 h-px bg-[var(--border-subtle)]" />
+          </div>
+
+          {/* Guest Mode Button */}
+          <button
+            onClick={handleGuestMode}
+            className="xbox-btn xbox-btn-outline w-full"
+          >
+            <UserX className="h-4 w-4" />
+            Entrar sem conta
+          </button>
+          <p className="text-xs text-[var(--text-muted)] text-center mt-3">
+            Seus dados serão salvos apenas neste navegador
+          </p>
         </div>
 
         {/* Footer */}
