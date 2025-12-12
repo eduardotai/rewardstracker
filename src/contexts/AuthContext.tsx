@@ -207,20 +207,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(false)
         })
 
+        // Track last user ID to prevent unnecessary updates/refetches on window focus
+        const lastUserId = { current: user?.id }
+
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 console.log('AuthContext: Auth State Change:', event, session?.user?.email)
-                setSession(session)
-                setUser(session?.user ?? null)
 
-                if (session?.user) {
-                    // Clear guest mode when logging in
-                    localStorage.removeItem(GUEST_STORAGE_KEY)
-                    setIsGuest(false)
-                    await fetchProfile(session.user.id, session.user.email)
+                // Always update session for token refresh
+                setSession(session)
+
+                const newUserId = session?.user?.id
+
+                // Only update user and fetch profile if user actually changed
+                if (newUserId !== lastUserId.current) {
+                    console.log('AuthContext: User changed, updating state...', newUserId)
+                    lastUserId.current = newUserId
+                    setUser(session?.user ?? null)
+
+                    if (session?.user) {
+                        // Clear guest mode when logging in
+                        localStorage.removeItem(GUEST_STORAGE_KEY)
+                        setIsGuest(false)
+                        await fetchProfile(session.user.id, session.user.email)
+                    } else {
+                        setProfile(null)
+                    }
                 } else {
-                    setProfile(null)
+                    console.log('AuthContext: User unchanged, skipping update logic.')
                 }
 
                 setLoading(false)
