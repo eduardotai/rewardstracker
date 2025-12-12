@@ -46,7 +46,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Saldo Atual</p>
-              <p className="text-3xl font-bold text-gray-900">{saldo.toLocaleString()} pts</p>
+              <p className="text-3xl font-bold text-gray-900">{totalSaldo.toLocaleString()} pts</p>
             </div>
           </div>
         </div>
