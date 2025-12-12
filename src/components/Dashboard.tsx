@@ -258,7 +258,11 @@ export default function Dashboard() {
       const newData = [...prev]
       const todayIndex = newData.findIndex(d => d.day === recordDateShort)
       if (todayIndex >= 0) {
-        newData[todayIndex].pts += newRecord.total_pts
+        // Create a copy of the object before modifying it
+        newData[todayIndex] = {
+          ...newData[todayIndex],
+          pts: newData[todayIndex].pts + newRecord.total_pts
+        }
       } else if (newData.length < 7) {
         // Optional: Add new day if space
         newData.push({ day: recordDateShort, pts: newRecord.total_pts })
