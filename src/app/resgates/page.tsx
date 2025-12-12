@@ -17,7 +17,7 @@ const navItems = [
 ]
 
 interface DisplayResgate {
-  id: number
+  id: string | number
   data: string
   item: string
   pts_usados: number
@@ -41,6 +41,7 @@ export default function ResgatesPage() {
       try {
         if (isGuest && guestData) {
           // Load from guest data context
+          // Ensure guest IDs are treated correctly (legacy might be numbers, new are UUID strings)
           setResgates(guestData.resgates || [])
           setLoading(false)
         } else if (user) {
@@ -73,10 +74,13 @@ export default function ResgatesPage() {
     loadData()
   }, [isGuest, guestData, user, authLoading])
 
-  const addResgate = useCallback((resgate: Omit<DisplayResgate, 'id'>) => {
+  const addResgate = useCallback((resgate: DisplayResgate | Omit<DisplayResgate, 'id'>) => {
+    // Determine ID: use provided one, or generate new UUID if missing
+    const id = 'id' in resgate ? resgate.id : crypto.randomUUID()
+
     const newResgate = {
       ...resgate,
-      id: Date.now(),
+      id,
     }
 
     const newResgates = [newResgate, ...resgates]
@@ -92,7 +96,7 @@ export default function ResgatesPage() {
     }
   }, [resgates, isGuest, updateGuestData])
 
-  const deleteResgate = useCallback((id: number) => {
+  const deleteResgate = useCallback((id: string | number) => {
     const newResgates = resgates.filter(r => r.id !== id)
     setResgates(newResgates)
 
@@ -131,7 +135,8 @@ export default function ResgatesPage() {
 
     // Create resgate object
     // Create resgate object with temp ID for optimistic update
-    const tempId = Date.now()
+    // We use crypto.randomUUID() to match Supabase's UUID type expectations
+    const tempId = crypto.randomUUID()
     const newResgate = {
       id: tempId,
       data: today,
@@ -141,7 +146,17 @@ export default function ResgatesPage() {
       custo_efetivo: data.custo_efetivo,
     }
 
-    addResgate(newResgate)
+    // We pass the full object with ID now, but addResgate expects Omit<id>, 
+    // however our simplified logic in addResgate will handle it (by ignoring passed ID if spread, or we adjust call)
+    // Actually, let's fix addResgate to be flexible or just pass without ID and let it decide?
+    // Current addResgate implementation overrides ID. That's bad for optimistic updates where WE want to control ID.
+    // Let's modify addResgate to take an optional ID or full object.
+
+    // For now, to keep it simple and working with the previous change:
+    addResgate({
+      ...newResgate,
+      id: tempId // Explicitly pass it, we need to update addResgate signature in next step if it's strict
+    } as any) // Temporary cast to bypass strict Omit<id> check until we refactor addResgate signature fully safe
     setIsModalOpen(false)
     toast.success('Resgate adicionado!')
 

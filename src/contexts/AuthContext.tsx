@@ -26,7 +26,7 @@ interface GuestAtividade {
 }
 
 interface GuestResgate {
-    id: number
+    id: string | number
     data: string
     item: string
     pts_usados: number
