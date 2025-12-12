@@ -78,7 +78,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Data da Atividade</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Data da Atividade</label>
             <input
               type="date"
               {...register('data')}
@@ -87,7 +87,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo de Atividade</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Tipo de Atividade</label>
             <select
               {...register('atividade')}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors bg-white"
@@ -101,10 +101,10 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Detalhamento de Pontos</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Detalhamento de Pontos</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">PC Busca</label>
+                <label className="block text-xs font-medium text-gray-800 mb-1">PC Busca</label>
                 <input
                   type="number"
                   {...register('pc_busca', { valueAsNumber: true })}
@@ -114,7 +114,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Mobile Busca</label>
+                <label className="block text-xs font-medium text-gray-800 mb-1">Mobile Busca</label>
                 <input
                   type="number"
                   {...register('mobile_busca', { valueAsNumber: true })}
@@ -124,7 +124,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Quiz</label>
+                <label className="block text-xs font-medium text-gray-800 mb-1">Quiz</label>
                 <input
                   type="number"
                   {...register('quiz', { valueAsNumber: true })}
@@ -134,7 +134,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Xbox</label>
+                <label className="block text-xs font-medium text-gray-800 mb-1">Xbox</label>
                 <input
                   type="number"
                   {...register('xbox', { valueAsNumber: true })}
@@ -152,13 +152,13 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
               {...register('meta_batida')}
               className="w-4 h-4 text-xbox-green bg-gray-100 border-gray-300 rounded focus:ring-xbox-green focus:ring-2"
             />
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-gray-900">
               Meta diária alcançada (150+ pontos)
             </label>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Notas (opcional)</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Notas (opcional)</label>
             <textarea
               {...register('notas')}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors resize-none"
@@ -169,7 +169,7 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
 
           <div className="bg-xbox-green bg-opacity-10 p-4 rounded-lg border border-xbox-green border-opacity-20">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-gray-700">Total de Pontos:</span>
+              <span className="text-sm font-semibold text-gray-900">Total de Pontos:</span>
               <span className="text-2xl font-bold text-xbox-green">{calculateTotal()}</span>
             </div>
           </div>

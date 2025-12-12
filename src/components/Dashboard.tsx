@@ -29,7 +29,7 @@ export default function Dashboard() {
     <div className="min-h-screen p-6">
       <header className="mb-12 text-center">
         <h1 className="text-4xl font-bold text-xbox-blue mb-2">Rewards Tracker BR</h1>
-        <p className="text-lg text-gray-700">Maximize seus pontos Microsoft Rewards no Brasil</p>
+        <p className="text-lg text-gray-800">Maximize seus pontos Microsoft Rewards no Brasil</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
@@ -43,7 +43,7 @@ export default function Dashboard() {
               <Trophy className="h-8 w-8 text-xbox-green" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Saldo Atual</p>
+              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Saldo Atual</p>
               <p className="text-3xl font-bold text-gray-900">{saldo.toLocaleString()} pts</p>
             </div>
           </div>
@@ -59,7 +59,7 @@ export default function Dashboard() {
               <Target className="h-8 w-8 text-xbox-blue" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Progresso Meta</p>
+              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Progresso Meta</p>
               <div className="w-full bg-gray-200 rounded-full h-3 mt-3 overflow-hidden">
                 <div
                   className="bg-gradient-to-r from-xbox-green to-xbox-blue h-3 rounded-full transition-all duration-500"
@@ -81,7 +81,7 @@ export default function Dashboard() {
               <Calendar className="h-8 w-8 text-xbox-yellow" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Streak</p>
+              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Streak</p>
               <p className="text-3xl font-bold text-gray-900">{streak} dias</p>
             </div>
           </div>
@@ -97,7 +97,7 @@ export default function Dashboard() {
               <TrendingUp className="h-8 w-8 text-xbox-green" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 uppercase tracking-wide">Média Diária</p>
+              <p className="text-sm font-medium text-gray-800 uppercase tracking-wide">Média Diária</p>
               <p className="text-3xl font-bold text-gray-900">{mediaDiaria} pts</p>
             </div>
           </div>
@@ -145,10 +145,10 @@ export default function Dashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Data</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Atividade</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Pontos</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Meta</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Data</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Atividade</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">Pontos</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-900">Meta</th>
                   </tr>
                 </thead>
                 <tbody>
