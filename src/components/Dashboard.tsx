@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { Trophy, TrendingUp, Calendar, Target } from 'lucide-react'
+import RegistroModal from './RegistroModal'
 
 const mockData = [
   { day: 'Seg', pts: 120 },
@@ -19,6 +20,7 @@ export default function Dashboard() {
   const [progress] = useState(70) // %
   const [streak] = useState(5)
   const [mediaDiaria] = useState(150)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -83,11 +85,52 @@ export default function Dashboard() {
         </ResponsiveContainer>
       </div>
 
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-semibold mb-4">Registros Recentes</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2">Data</th>
+                <th className="text-left py-2">Atividade</th>
+                <th className="text-right py-2">Pontos</th>
+                <th className="text-center py-2">Meta</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b">
+                <td className="py-2">2024-12-12</td>
+                <td>Buscas + Quiz</td>
+                <td className="text-right">150</td>
+                <td className="text-center">✓</td>
+              </tr>
+              <tr className="border-b">
+                <td className="py-2">2024-12-11</td>
+                <td>Xbox</td>
+                <td className="text-right">100</td>
+                <td className="text-center">✓</td>
+              </tr>
+              <tr>
+                <td className="py-2">2024-12-10</td>
+                <td>Buscas</td>
+                <td className="text-right">50</td>
+                <td className="text-center">✗</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="text-center">
-        <button className="bg-blue-600 text-white px-8 py-4 rounded-lg text-xl font-semibold hover:bg-blue-700 transition-colors">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-600 text-white px-8 py-4 rounded-lg text-xl font-semibold hover:bg-blue-700 transition-colors"
+        >
           Log Hoje
         </button>
       </div>
+
+      <RegistroModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   )
 }
