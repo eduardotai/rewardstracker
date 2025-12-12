@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,6 +11,7 @@ import {
   createColumnHelper,
 } from '@tanstack/react-table'
 import { Plus, Trash2, Search, Activity, ChevronLeft, ChevronRight, Home, BarChart3, PiggyBank, User, Gift, Menu, X as CloseIcon } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Atividade = {
   id: string
@@ -20,6 +21,8 @@ type Atividade = {
   categoria: string
   notas: string
 }
+
+const ATIVIDADES_STORAGE_KEY = 'rewards_tracker_atividades'
 
 const columnHelper = createColumnHelper<Atividade>()
 
@@ -32,19 +35,49 @@ const navItems = [
 ]
 
 export default function AtividadesPage() {
-  const [data, setData] = useState<Atividade[]>([
-    { id: '1', nome: 'Buscas PC', pts_esperados: 150, frequencia: 'Diária', categoria: 'Buscas', notas: 'Máximo 150 pts/dia' },
-    { id: '2', nome: 'Buscas Mobile', pts_esperados: 150, frequencia: 'Diária', categoria: 'Buscas', notas: 'Máximo 150 pts/dia' },
-    { id: '3', nome: 'Quiz Diário', pts_esperados: 50, frequencia: 'Diária', categoria: 'Quiz', notas: '10 perguntas' },
-    { id: '4', nome: 'Missões Xbox', pts_esperados: 100, frequencia: 'Diária', categoria: 'Xbox', notas: 'Varia por dia' },
-  ])
-
+  const { isGuest, guestData, updateGuestData, user } = useAuth()
+  const [data, setData] = useState<Atividade[]>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  // Load data on mount
+  useEffect(() => {
+    const loadData = () => {
+      if (isGuest && guestData) {
+        // Load from guest data context
+        setData(guestData.atividades || [])
+      } else if (user) {
+        // For authenticated users, load from localStorage (atividades are local only)
+        const saved = localStorage.getItem(ATIVIDADES_STORAGE_KEY)
+        if (saved) {
+          try {
+            setData(JSON.parse(saved))
+          } catch {
+            setData([])
+          }
+        }
+      }
+      setLoading(false)
+    }
+
+    loadData()
+  }, [isGuest, guestData, user])
+
+  // Save data when it changes
+  const saveData = useCallback((newData: Atividade[]) => {
+    setData(newData)
+
+    if (isGuest) {
+      updateGuestData({ atividades: newData })
+    } else {
+      localStorage.setItem(ATIVIDADES_STORAGE_KEY, JSON.stringify(newData))
+    }
+  }, [isGuest, updateGuestData])
 
   const deleteRow = useCallback((id: string) => {
-    setData(old => old.filter(r => r.id !== id))
-  }, [])
+    saveData(data.filter(r => r.id !== id))
+  }, [data, saveData])
 
   const columns = [
     columnHelper.accessor('nome', { header: 'Nome' }),
@@ -80,14 +113,26 @@ export default function AtividadesPage() {
 
   const addNewRow = () => {
     const newId = Date.now().toString()
-    setData(old => [...old, {
+    const newData = [...data, {
       id: newId,
       nome: 'Nova Atividade',
       pts_esperados: 0,
       frequencia: 'Diária',
       categoria: 'Outros',
       notas: '',
-    }])
+    }]
+    saveData(newData)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="xbox-shimmer w-16 h-16 rounded-full mx-auto mb-4" />
+          <p className="text-[var(--text-secondary)]">Carregando...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -216,7 +261,7 @@ export default function AtividadesPage() {
                   ) : (
                     <tr>
                       <td colSpan={columns.length} className="text-center text-[var(--text-muted)] py-8">
-                        Nenhuma atividade encontrada.
+                        {data.length === 0 ? 'Nenhuma atividade cadastrada. Clique em "Adicionar Atividade" para começar.' : 'Nenhuma atividade encontrada.'}
                       </td>
                     </tr>
                   )}
@@ -225,36 +270,38 @@ export default function AtividadesPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center gap-2">
-              <button
-                className="xbox-btn xbox-btn-ghost p-2"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+          {data.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center gap-2">
+                <button
+                  className="xbox-btn xbox-btn-ghost p-2"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  className="xbox-btn xbox-btn-ghost p-2"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <span className="text-sm text-[var(--text-secondary)]">
+                  Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+                </span>
+              </div>
+              <select
+                value={table.getState().pagination.pageSize}
+                onChange={(e) => table.setPageSize(Number(e.target.value))}
+                className="xbox-input xbox-select w-auto"
               >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                className="xbox-btn xbox-btn-ghost p-2"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              <span className="text-sm text-[var(--text-secondary)]">
-                Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
-              </span>
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <option key={pageSize} value={pageSize}>Mostrar {pageSize}</option>
+                ))}
+              </select>
             </div>
-            <select
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => table.setPageSize(Number(e.target.value))}
-              className="xbox-input xbox-select w-auto"
-            >
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <option key={pageSize} value={pageSize}>Mostrar {pageSize}</option>
-              ))}
-            </select>
-          </div>
+          )}
         </div>
       </main>
     </div>

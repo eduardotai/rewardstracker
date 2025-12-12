@@ -16,6 +16,25 @@ interface UserProfile {
     created_at: string
 }
 
+interface GuestAtividade {
+    id: string
+    nome: string
+    pts_esperados: number
+    frequencia: string
+    categoria: string
+    notas: string
+}
+
+interface GuestResgate {
+    id: number
+    data: string
+    item: string
+    pts_usados: number
+    valor_brl: number
+    custo_efetivo: number
+    created_at: string
+}
+
 interface GuestData {
     registros: Array<{
         id: number
@@ -30,6 +49,8 @@ interface GuestData {
         notas: string
         created_at: string
     }>
+    atividades: GuestAtividade[]
+    resgates: GuestResgate[]
     profile: {
         display_name: string
         tier: string
@@ -48,12 +69,15 @@ interface AuthContextType {
     refreshProfile: () => Promise<void>
     enterAsGuest: () => void
     updateGuestData: (data: Partial<GuestData>) => void
+    updateGuestProfile: (profile: Partial<GuestData['profile']>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const defaultGuestData: GuestData = {
     registros: [],
+    atividades: [],
+    resgates: [],
     profile: {
         display_name: 'Visitante',
         tier: 'Sem',
@@ -142,6 +166,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(updated))
     }
 
+    const updateGuestProfile = (profileData: Partial<GuestData['profile']>) => {
+        if (!guestData) return
+
+        const updated = {
+            ...guestData,
+            profile: { ...guestData.profile, ...profileData }
+        }
+        setGuestData(updated)
+        localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(updated))
+    }
+
     useEffect(() => {
         // Check for guest mode first
         if (loadGuestMode()) {
@@ -208,7 +243,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             signOut,
             refreshProfile,
             enterAsGuest,
-            updateGuestData
+            updateGuestData,
+            updateGuestProfile
         }}>
             {children}
         </AuthContext.Provider>

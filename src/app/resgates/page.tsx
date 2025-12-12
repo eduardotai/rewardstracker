@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Calculator, Home, Activity, BarChart3, PiggyBank, User, Gift, Menu, X as CloseIcon, CreditCard } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Calculator, Home, Activity, BarChart3, PiggyBank, User, Gift, Menu, X as CloseIcon, CreditCard, Trash2 } from 'lucide-react'
 import ResgateModal from '@/components/ResgateModal'
+import { useAuth } from '@/contexts/AuthContext'
+import { fetchResgates, Resgate } from '@/hooks/useData'
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: false },
@@ -12,19 +14,92 @@ const navItems = [
   { icon: User, label: 'Perfil', href: '/perfil', active: false },
 ]
 
+interface DisplayResgate {
+  id: number
+  data: string
+  item: string
+  pts_usados: number
+  valor_brl: number
+  custo_efetivo: number
+}
+
 export default function ResgatesPage() {
+  const { isGuest, guestData, updateGuestData, user, loading: authLoading } = useAuth()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<'add' | 'simulate'>('add')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [resgates, setResgates] = useState<DisplayResgate[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const mockResgates = [
-    { id: 1, data: '2024-12-10', item: 'R$5 Gift Card', pts_usados: 525, valor_brl: 5, custo_efetivo: 105 },
-    { id: 2, data: '2024-12-08', item: 'R$10 Gift Card', pts_usados: 1050, valor_brl: 10, custo_efetivo: 105 },
-    { id: 3, data: '2024-12-05', item: 'R$25 Xbox Gift Card', pts_usados: 2625, valor_brl: 25, custo_efetivo: 105 },
-  ]
+  // Load resgates on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (authLoading) return
 
-  const totalPtsUsados = mockResgates.reduce((sum, r) => sum + r.pts_usados, 0)
-  const totalValor = mockResgates.reduce((sum, r) => sum + r.valor_brl, 0)
+      if (isGuest && guestData) {
+        // Load from guest data context
+        setResgates(guestData.resgates || [])
+        setLoading(false)
+      } else if (user) {
+        // Load from Supabase for authenticated users
+        const { data } = await fetchResgates(user.id)
+        if (data) {
+          setResgates(data.map(r => ({
+            id: r.id,
+            data: r.data,
+            item: r.item,
+            pts_usados: r.pts_usados,
+            valor_brl: r.valor_brl,
+            custo_efetivo: r.custo_efetivo,
+          })))
+        }
+        setLoading(false)
+      } else {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [isGuest, guestData, user, authLoading])
+
+  const addResgate = useCallback((resgate: Omit<DisplayResgate, 'id'>) => {
+    const newResgate = {
+      ...resgate,
+      id: Date.now(),
+    }
+
+    const newResgates = [newResgate, ...resgates]
+    setResgates(newResgates)
+
+    if (isGuest) {
+      updateGuestData({
+        resgates: newResgates.map(r => ({
+          ...r,
+          created_at: new Date().toISOString(),
+        }))
+      })
+    }
+  }, [resgates, isGuest, updateGuestData])
+
+  const deleteResgate = useCallback((id: number) => {
+    const newResgates = resgates.filter(r => r.id !== id)
+    setResgates(newResgates)
+
+    if (isGuest) {
+      updateGuestData({
+        resgates: newResgates.map(r => ({
+          ...r,
+          created_at: new Date().toISOString(),
+        }))
+      })
+    }
+  }, [resgates, isGuest, updateGuestData])
+
+  const totalPtsUsados = resgates.reduce((sum, r) => sum + r.pts_usados, 0)
+  const totalValor = resgates.reduce((sum, r) => sum + r.valor_brl, 0)
+  const mediaCusto = resgates.length > 0
+    ? Math.round(totalPtsUsados / totalValor)
+    : 0
 
   const openAddModal = () => {
     setModalMode('add')
@@ -34,6 +109,27 @@ export default function ResgatesPage() {
   const openSimulateModal = () => {
     setModalMode('simulate')
     setIsModalOpen(true)
+  }
+
+  const handleModalClose = (resgate?: { item: string; pts_usados: number; valor_brl: number; custo_efetivo: number }) => {
+    setIsModalOpen(false)
+    if (resgate && modalMode === 'add') {
+      addResgate({
+        data: new Date().toISOString().split('T')[0],
+        ...resgate,
+      })
+    }
+  }
+
+  if (loading || authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="xbox-shimmer w-16 h-16 rounded-full mx-auto mb-4" />
+          <p className="text-[var(--text-secondary)]">Carregando...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -53,8 +149,8 @@ export default function ResgatesPage() {
                 <a
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
-                      ? 'bg-[var(--bg-tertiary)] text-white'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                    ? 'bg-[var(--bg-tertiary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
                     }`}
                 >
                   {item.active && <span className="xbox-nav-indicator" />}
@@ -125,7 +221,7 @@ export default function ResgatesPage() {
             </div>
             <div className="xbox-card p-5">
               <p className="xbox-label">Média Custo</p>
-              <p className="text-2xl font-bold text-[var(--warning)]">105 <span className="text-sm text-[var(--text-muted)]">pts/R$</span></p>
+              <p className="text-2xl font-bold text-[var(--warning)]">{mediaCusto || '-'} <span className="text-sm text-[var(--text-muted)]">pts/R$</span></p>
             </div>
           </div>
 
@@ -158,18 +254,35 @@ export default function ResgatesPage() {
                     <th className="text-right">Pts Usados</th>
                     <th className="text-right">Valor BRL</th>
                     <th className="text-right">Custo Efetivo</th>
+                    <th className="text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {mockResgates.map((resgate) => (
-                    <tr key={resgate.id}>
-                      <td className="text-white">{resgate.data}</td>
-                      <td className="text-white">{resgate.item}</td>
-                      <td className="text-right text-[var(--xbox-green)] font-semibold">{resgate.pts_usados.toLocaleString()}</td>
-                      <td className="text-right text-white">R$ {resgate.valor_brl}</td>
-                      <td className="text-right text-[var(--text-secondary)]">{resgate.custo_efetivo} pts/R$</td>
+                  {resgates.length > 0 ? (
+                    resgates.map((resgate) => (
+                      <tr key={resgate.id}>
+                        <td className="text-white">{resgate.data}</td>
+                        <td className="text-white">{resgate.item}</td>
+                        <td className="text-right text-[var(--xbox-green)] font-semibold">{resgate.pts_usados.toLocaleString()}</td>
+                        <td className="text-right text-white">R$ {resgate.valor_brl}</td>
+                        <td className="text-right text-[var(--text-secondary)]">{resgate.custo_efetivo} pts/R$</td>
+                        <td className="text-right">
+                          <button
+                            onClick={() => deleteResgate(resgate.id)}
+                            className="p-2 text-[var(--error)] hover:bg-[var(--error)]/10 rounded transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="text-center text-[var(--text-muted)] py-8">
+                        Nenhum resgate registrado. Clique em &quot;Adicionar Resgate&quot; para começar.
+                      </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -179,7 +292,7 @@ export default function ResgatesPage() {
 
       <ResgateModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleModalClose}
         mode={modalMode}
       />
     </div>

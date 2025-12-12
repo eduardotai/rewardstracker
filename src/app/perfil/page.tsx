@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { User, Crown, Download, FileText, EyeOff, LogOut, Home, Activity, BarChart3, PiggyBank, Gift, Menu, X as CloseIcon, Bell, Palette } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, Crown, Download, FileText, EyeOff, LogOut, Home, Activity, BarChart3, PiggyBank, Gift, Menu, X as CloseIcon, Bell, Palette, RotateCcw } from 'lucide-react'
 import jsPDF from 'jspdf'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
+import toast from 'react-hot-toast'
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: false },
@@ -13,10 +16,121 @@ const navItems = [
 ]
 
 export default function PerfilPage() {
+  const { user, profile, isGuest, guestData, updateGuestProfile, signOut, refreshProfile, loading: authLoading } = useAuth()
   const [isPremium] = useState(false)
   const [tier, setTier] = useState('Sem')
   const [metaMensal, setMetaMensal] = useState(12000)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Load profile data
+  useEffect(() => {
+    if (isGuest && guestData) {
+      setTier(guestData.profile.tier)
+      setMetaMensal(guestData.profile.meta_mensal)
+    } else if (profile) {
+      setTier(profile.tier)
+      setMetaMensal(profile.meta_mensal)
+    }
+  }, [isGuest, guestData, profile])
+
+  // Get display info
+  const displayName = isGuest
+    ? guestData?.profile.display_name || 'Visitante'
+    : profile?.display_name || user?.email?.split('@')[0] || 'Usuário'
+
+  const displayEmail = isGuest
+    ? 'Modo Visitante (dados locais)'
+    : profile?.email || user?.email || ''
+
+  // Auto-save profile changes for guest
+  const handleTierChange = async (newTier: string) => {
+    setTier(newTier)
+
+    if (isGuest) {
+      updateGuestProfile({ tier: newTier })
+    } else if (user) {
+      setSaving(true)
+      const { error } = await supabase
+        .from('profiles')
+        .update({ tier: newTier })
+        .eq('id', user.id)
+
+      if (error) {
+        toast.error('Erro ao salvar tier')
+      } else {
+        toast.success('Tier atualizado!')
+        await refreshProfile()
+      }
+      setSaving(false)
+    }
+  }
+
+  const handleMetaChange = async (newMeta: number) => {
+    setMetaMensal(newMeta)
+
+    if (isGuest) {
+      updateGuestProfile({ meta_mensal: newMeta })
+    }
+  }
+
+  const handleMetaBlur = async () => {
+    if (!isGuest && user) {
+      setSaving(true)
+      const { error } = await supabase
+        .from('profiles')
+        .update({ meta_mensal: metaMensal })
+        .eq('id', user.id)
+
+      if (error) {
+        toast.error('Erro ao salvar meta')
+      } else {
+        toast.success('Meta atualizada!')
+        await refreshProfile()
+      }
+      setSaving(false)
+    }
+  }
+
+  const handleResetData = async () => {
+    if (!confirm('Tem certeza que deseja resetar todos os seus pontos e registros? Esta ação não pode ser desfeita.')) {
+      return
+    }
+
+    if (isGuest && guestData) {
+      // Clear guest data but keep profile settings
+      const { updateGuestData } = await import('@/contexts/AuthContext').then(m => {
+        // Re-get context to call updateGuestData
+        return { updateGuestData: () => { } }
+      })
+      localStorage.setItem('rewards_tracker_guest_data', JSON.stringify({
+        registros: [],
+        atividades: [],
+        resgates: [],
+        profile: guestData.profile,
+      }))
+      toast.success('Dados resetados!')
+      window.location.reload()
+    } else if (user) {
+      // Delete all user records from Supabase
+      const { error: recordsError } = await supabase
+        .from('registros_diarios')
+        .delete()
+        .eq('user_id', user.id)
+
+      const { error: resgatesError } = await supabase
+        .from('resgates')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (recordsError || resgatesError) {
+        toast.error('Erro ao resetar dados')
+      } else {
+        toast.success('Dados resetados!')
+        window.location.reload()
+      }
+    }
+  }
 
   const handleExportPDF = () => {
     if (!isPremium) {
@@ -25,8 +139,8 @@ export default function PerfilPage() {
     }
     const doc = new jsPDF()
     doc.text('Relatório Rewards Tracker BR', 20, 20)
-    doc.text(`Saldo Atual: 8500 pontos`, 20, 40)
-    doc.text(`Streak: 5 dias`, 20, 50)
+    doc.text(`Usuário: ${displayName}`, 20, 40)
+    doc.text(`Tier: ${tier}`, 20, 50)
     doc.text(`Meta Mensal: ${metaMensal} pontos`, 20, 60)
     doc.save('relatorio-rewards.pdf')
   }
@@ -37,6 +151,24 @@ export default function PerfilPage() {
       return
     }
     alert('Abrindo editor de templates...')
+  }
+
+  const handleLogout = async () => {
+    // Clear guest cookie
+    document.cookie = 'rewards_guest_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    await signOut()
+    window.location.href = '/auth'
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="xbox-shimmer w-16 h-16 rounded-full mx-auto mb-4" />
+          <p className="text-[var(--text-secondary)]">Carregando...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -56,8 +188,8 @@ export default function PerfilPage() {
                 <a
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
-                      ? 'bg-[var(--bg-tertiary)] text-white'
-                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                    ? 'bg-[var(--bg-tertiary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
                     }`}
                 >
                   {item.active && <span className="xbox-nav-indicator" />}
@@ -124,8 +256,13 @@ export default function PerfilPage() {
                   <User className="h-8 w-8 text-[var(--xbox-green)]" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-white">João Silva</h3>
-                  <p className="text-[var(--text-secondary)]">joao@email.com</p>
+                  <h3 className="text-xl font-semibold text-white">{displayName}</h3>
+                  <p className="text-[var(--text-secondary)]">{displayEmail}</p>
+                  {isGuest && (
+                    <span className="inline-block mt-1 text-xs bg-[var(--warning)]/20 text-[var(--warning)] px-2 py-0.5 rounded">
+                      Modo Visitante
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -134,8 +271,9 @@ export default function PerfilPage() {
                   <label className="xbox-label">Tier Xbox</label>
                   <select
                     value={tier}
-                    onChange={(e) => setTier(e.target.value)}
+                    onChange={(e) => handleTierChange(e.target.value)}
                     className="xbox-input xbox-select"
+                    disabled={saving}
                   >
                     <option value="Sem">Sem Xbox</option>
                     <option value="Essential">Xbox Essential</option>
@@ -149,12 +287,32 @@ export default function PerfilPage() {
                   <input
                     type="number"
                     value={metaMensal}
-                    onChange={(e) => setMetaMensal(parseInt(e.target.value))}
+                    onChange={(e) => handleMetaChange(parseInt(e.target.value) || 0)}
+                    onBlur={handleMetaBlur}
                     className="xbox-input"
                     min="1"
+                    disabled={saving}
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Reset Data Card */}
+            <div className="xbox-card p-6">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <RotateCcw className="h-5 w-5 text-[var(--warning)]" />
+                Resetar Dados
+              </h3>
+              <p className="text-[var(--text-secondary)] text-sm mb-4">
+                Isso irá apagar todos os seus registros de pontos, resgates e atividades. Suas configurações de perfil serão mantidas.
+              </p>
+              <button
+                onClick={handleResetData}
+                className="xbox-btn bg-[var(--warning)] text-black hover:bg-[var(--warning)]/90"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Resetar Todos os Dados
+              </button>
             </div>
 
             {/* Premium Card */}
@@ -241,9 +399,12 @@ export default function PerfilPage() {
                   <input type="checkbox" className="xbox-checkbox" defaultChecked />
                 </div>
 
-                <button className="w-full xbox-btn bg-[var(--error)] text-white hover:bg-[var(--error)]/90 mt-4">
+                <button
+                  onClick={handleLogout}
+                  className="w-full xbox-btn bg-[var(--error)] text-white hover:bg-[var(--error)]/90 mt-4"
+                >
                   <LogOut className="h-4 w-4" />
-                  Logout
+                  Sair
                 </button>
               </div>
             </div>
