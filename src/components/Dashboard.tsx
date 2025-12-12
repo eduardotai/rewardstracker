@@ -177,28 +177,110 @@ export default function Dashboard() {
     loadData()
   }, [user, isGuest, loadGuestData])
 
-  // Reload data when modal closes
-  const handleModalClose = () => {
-    setIsModalOpen(false)
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
+  const totalPages = Math.ceil(recentRecords.length / itemsPerPage)
 
-    if (isGuest) {
-      loadGuestData()
-      return
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage)
+    }
+  }
+
+  // Get current posts
+  const indexOfLastRecord = currentPage * itemsPerPage
+  const indexOfFirstRecord = indexOfLastRecord - itemsPerPage
+  const currentRecords = recentRecords.slice(indexOfFirstRecord, indexOfLastRecord)
+
+
+  // Optimistic Update Implementation
+  const handleSaveRecord = (newRecord: any) => {
+    // 1. Update Recent Records immediately
+    const updatedRecords = [newRecord, ...recentRecords]
+    setRecentRecords(updatedRecords)
+
+    // 2. Update Stats (Points & Average)
+    const newTotalSaldo = stats.totalSaldo + newRecord.total_pts
+    const newMedia = Math.round(newTotalSaldo / updatedRecords.length)
+
+    // 3. Update Streak (Strict Logic Re-calculated)
+    // We can reuse the same logic or just increment if it's a new day. 
+    // For simplicity and accuracy, let's re-run the streak calc on the new list.
+    const sortedForStreak = [...updatedRecords]
+      .filter(r => r.meta_batida)
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+
+    let streak = 0
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    let lastDate: Date | null = null
+
+    for (const record of sortedForStreak) {
+      const recordDateParts = record.data.split('T')[0].split('-')
+      const recordDate = new Date(
+        parseInt(recordDateParts[0]),
+        parseInt(recordDateParts[1]) - 1,
+        parseInt(recordDateParts[2])
+      )
+      recordDate.setHours(0, 0, 0, 0)
+
+      if (lastDate === null) {
+        const diffTime = today.getTime() - recordDate.getTime()
+        const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+        if (diffDays <= 1) {
+          streak++
+          lastDate = recordDate
+        } else { break }
+      } else {
+        const diffTime = lastDate.getTime() - recordDate.getTime()
+        const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+        if (diffDays === 0) continue
+        if (diffDays === 1) {
+          streak++
+          lastDate = recordDate
+        } else { break }
+      }
     }
 
+    setStats({
+      totalSaldo: newTotalSaldo,
+      mediaDiaria: newMedia,
+      streak: streak
+    })
+
+    // 4. Update Weekly Chart (If record date is within last 7 days)
+    const recordDateShort = new Date(newRecord.data).toLocaleDateString('pt-BR', { weekday: 'short' })
+    const todayShort = new Date().toLocaleDateString('pt-BR', { weekday: 'short' })
+
+    // If it's today (most likely), update the chart entry
+    setWeeklyData(prev => {
+      const newData = [...prev]
+      const todayIndex = newData.findIndex(d => d.day === recordDateShort)
+      if (todayIndex >= 0) {
+        newData[todayIndex].pts += newRecord.total_pts
+      } else if (newData.length < 7) {
+        // Optional: Add new day if space
+        newData.push({ day: recordDateShort, pts: newRecord.total_pts })
+      }
+      return newData
+    })
+
+    // 5. Invalidate Cache (Background)
     if (user) {
-      fetchWeeklyRecords(user.id).then(({ data }) => {
-        if (data) {
-          setWeeklyData(data.map(r => ({
-            day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
-            pts: r.total_pts
-          })))
-        }
+      import('@/hooks/useData').then(({ invalidateCache }) => {
+        invalidateCache(user.id)
+        // We DON'T need to re-fetch immediately because we just verified our data is correct locally.
+        // But we can trigger a silent re-fetch in background if desired.
       })
-      fetchDailyRecords(user.id, 10).then(({ data }) => {
-        if (data) setRecentRecords(data)
-      })
-      fetchUserStats(user.id).then(setStats)
+    }
+  }
+
+  // Reload data when modal closes (Secondary safety, mostly for Guest)
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    if (isGuest) {
+      loadGuestData()
     }
   }
 
@@ -461,11 +543,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Registros Recentes */}
             <div className="lg:col-span-2 xbox-card p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-[var(--xbox-green)]" />
-                Registros Recentes
-              </h3>
-              <div className="overflow-x-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-[var(--xbox-green)]" />
+                  Registros Recentes
+                </h3>
+              </div>
+
+              <div className="overflow-x-auto min-h-[300px]">
                 <table className="xbox-table">
                   <thead>
                     <tr>
@@ -482,8 +567,8 @@ export default function Dashboard() {
                           <div className="xbox-shimmer w-32 h-4 mx-auto" />
                         </td>
                       </tr>
-                    ) : recentRecords.length > 0 ? (
-                      recentRecords.slice(0, 5).map((record) => (
+                    ) : currentRecords.length > 0 ? (
+                      currentRecords.map((record) => (
                         <tr key={record.id}>
                           <td className="text-white">
                             {new Date(record.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -509,6 +594,29 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {recentRecords.length > itemsPerPage && (
+                <div className="flex justify-between items-center mt-4 border-t border-[var(--border-subtle)] pt-4">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="xbox-btn xbox-btn-ghost text-sm disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-sm text-[var(--text-muted)]">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="xbox-btn xbox-btn-ghost text-sm disabled:opacity-50"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Sidebar Content */}
@@ -540,7 +648,12 @@ export default function Dashboard() {
       <ReactTooltip id="media-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
       <ReactTooltip id="log-tooltip" place="left" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
 
-      <RegistroModal isOpen={isModalOpen} onClose={handleModalClose} isGuest={isGuest} />
+      <RegistroModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onSave={handleSaveRecord}
+        isGuest={isGuest}
+      />
     </div>
   )
 }

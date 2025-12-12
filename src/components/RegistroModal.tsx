@@ -25,10 +25,11 @@ type RegistroForm = z.infer<typeof registroSchema>
 interface RegistroModalProps {
   isOpen: boolean
   onClose: () => void
+  onSave?: (record: any) => void
   isGuest?: boolean
 }
 
-export default function RegistroModal({ isOpen, onClose, isGuest = false }: RegistroModalProps) {
+export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false }: RegistroModalProps) {
   const [metaDiaria, setMetaDiaria] = useState(150)
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<RegistroForm>({
@@ -82,16 +83,17 @@ export default function RegistroModal({ isOpen, onClose, isGuest = false }: Regi
 
     guestData.registros.unshift(newRecord)
     localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(guestData))
-    return true
+    return newRecord
   }
 
   const onSubmit = async (data: RegistroForm) => {
     try {
       // Guest mode: save to localStorage
       if (isGuest) {
-        saveGuestRecord(data)
+        const newRecord = saveGuestRecord(data)
         toast.success('Registro salvo localmente!')
         reset()
+        if (onSave) onSave(newRecord)
         onClose()
         return
       }
@@ -105,7 +107,7 @@ export default function RegistroModal({ isOpen, onClose, isGuest = false }: Regi
         return
       }
 
-      const { error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from('registros_diarios')
         .insert([
           {
@@ -121,6 +123,8 @@ export default function RegistroModal({ isOpen, onClose, isGuest = false }: Regi
             notas: data.notas || '',
           }
         ])
+        .select()
+        .single()
 
       if (error) {
         console.error('Supabase error:', error)
@@ -129,6 +133,7 @@ export default function RegistroModal({ isOpen, onClose, isGuest = false }: Regi
       }
       toast.success('Registro salvo com sucesso!')
       reset()
+      if (onSave && insertedData) onSave(insertedData)
       onClose()
     } catch (err) {
       console.error('Error saving registro:', err)
