@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 
-const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 10000, retries: number = 2): Promise<T> => {
+const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 15000, retries: number = 2): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
         let timeoutId: NodeJS.Timeout
         try {

@@ -168,7 +168,7 @@ export default function Dashboard() {
         // Note: We fetch ALL daily records (no limit) to warm the cache for other pages/tabs
         const [weeklyRes, recentRes, userStats] = await Promise.all([
           fetchWeeklyRecords(user.id),
-          fetchDailyRecords(user.id),
+          fetchDailyRecords(user.id, 20), // Limit to 20 to prevent timeout on large datasets
           fetchUserStats(user.id)
         ])
 
