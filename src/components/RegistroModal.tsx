@@ -100,6 +100,7 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
 
       // Logged in user: save to Supabase
       const { supabase } = await import('@/lib/supabase')
+      const { insertDailyRecord } = await import('@/hooks/useData')
 
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
@@ -107,24 +108,17 @@ export default function RegistroModal({ isOpen, onClose, onSave, isGuest = false
         return
       }
 
-      const { data: insertedData, error } = await supabase
-        .from('registros_diarios')
-        .insert([
-          {
-            user_id: user.id,
-            data: data.data,
-            atividade: data.atividade,
-            pc_busca: data.pc_busca,
-            mobile_busca: data.mobile_busca,
-            quiz: data.quiz,
-            xbox: data.xbox,
-            total_pts: totalPts,
-            meta_batida: data.meta_batida,
-            notas: data.notas || '',
-          }
-        ])
-        .select()
-        .single()
+      const { data: insertedData, error } = await insertDailyRecord(user.id, {
+        data: data.data,
+        atividade: data.atividade,
+        pc_busca: data.pc_busca,
+        mobile_busca: data.mobile_busca,
+        quiz: data.quiz,
+        xbox: data.xbox,
+        total_pts: totalPts,
+        meta_batida: data.meta_batida,
+        notas: data.notas || '',
+      })
 
       if (error) {
         console.error('Supabase error:', error)

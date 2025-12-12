@@ -297,11 +297,12 @@ export async function fetchResgates(userId: string) {
 
 // Insert daily record
 export async function insertDailyRecord(userId: string, record: Omit<DailyRecord, 'id' | 'created_at' | 'user_id'>) {
-    const { data, error } = await supabase
+    const { data, error } = await withTimeout(() => supabase
         .from('registros_diarios')
         .insert([{ ...record, user_id: userId }])
         .select()
         .single()
+    )
 
     if (!error) {
         invalidateCache(userId)
@@ -312,11 +313,12 @@ export async function insertDailyRecord(userId: string, record: Omit<DailyRecord
 
 // Insert resgate
 export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' | 'created_at' | 'user_id'>) {
-    const { data, error } = await supabase
+    const { data, error } = await withTimeout(() => supabase
         .from('resgates')
         .insert([{ ...resgate, user_id: userId }])
         .select()
         .single()
+    )
 
     if (!error) {
         invalidateCache(userId)
