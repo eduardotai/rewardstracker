@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, Monitor, Smartphone, Brain, Gamepad2, Target } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const registroSchema = z.object({
@@ -26,7 +26,9 @@ interface RegistroModalProps {
 }
 
 export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<RegistroForm>({
+  const [metaDiaria, setMetaDiaria] = useState(150) // Meta configurável pelo usuário
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<RegistroForm>({
     resolver: zodResolver(registroSchema),
     defaultValues: {
       data: new Date().toISOString().split('T')[0],
@@ -40,20 +42,26 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
 
   const watchedValues = watch()
 
-  // Simple calculation: PC 5pts, Mobile 5pts, Quiz 10pts, Xbox 10pts per activity
   const calculateTotal = () => {
     const pc = watchedValues.pc_busca || 0
     const mobile = watchedValues.mobile_busca || 0
     const quiz = watchedValues.quiz || 0
     const xbox = watchedValues.xbox || 0
-    return (pc + mobile) * 5 + quiz * 10 + xbox * 10
+    return pc + mobile + quiz + xbox
   }
+
+  const totalPts = calculateTotal()
+  const metaAlcancada = totalPts >= metaDiaria
+
+  // Atualiza automaticamente o checkbox quando a meta é atingida
+  useEffect(() => {
+    setValue('meta_batida', metaAlcancada)
+  }, [metaAlcancada, setValue])
 
   const onSubmit = async (data: RegistroForm) => {
     try {
       const { supabase } = await import('@/lib/supabase')
-      const totalPts = calculateTotal()
-      
+
       const { error } = await supabase
         .from('registros_diarios')
         .insert([
@@ -69,49 +77,59 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
             notas: data.notas || '',
           }
         ])
-      
-      if (error) throw error
+
+      if (error) {
+        console.error('Supabase error:', error)
+        toast.error(`Erro: ${error.message}`)
+        return
+      }
       toast.success('Registro salvo com sucesso!')
       onClose()
-    } catch (error) {
-      toast.error('Erro ao salvar registro')
+    } catch (err) {
+      console.error('Error saving registro:', err)
+      toast.error('Erro ao salvar registro. Verifique a conexão.')
     }
   }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white p-8 rounded-2xl w-full max-w-lg shadow-2xl border border-gray-200">
+    <div className="xbox-modal-overlay" onClick={onClose}>
+      <div className="xbox-modal p-6" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Plus className="h-6 w-6 text-xbox-green mr-3" />
+          <h2 className="text-xl font-bold text-white flex items-center gap-3">
+            <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
+              <Plus className="h-5 w-5 text-[var(--xbox-green)]" />
+            </div>
             Registro Diário
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded-full transition-colors"
+            className="p-2 hover:bg-[var(--bg-tertiary)] rounded transition-colors text-[var(--text-secondary)] hover:text-white"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Data */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Data da Atividade</label>
+            <label className="xbox-label">Data da Atividade</label>
             <input
               type="date"
               {...register('data')}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors"
+              className="xbox-input"
             />
-            {errors.data && <p className="text-xbox-red text-sm mt-1">{errors.data.message}</p>}
+            {errors.data && <p className="text-[var(--error)] text-xs mt-1">{errors.data.message}</p>}
           </div>
 
+          {/* Atividade */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Tipo de Atividade</label>
+            <label className="xbox-label">Tipo de Atividade</label>
             <select
               {...register('atividade')}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors bg-white"
+              className="xbox-input xbox-select"
             >
               <option value="">Selecione uma atividade...</option>
               <option value="Buscas">🔍 Buscas no PC/Mobile</option>
@@ -119,48 +137,80 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
               <option value="Xbox">🎮 Missões Xbox</option>
               <option value="Outros">📝 Outros</option>
             </select>
-            {errors.atividade && <p className="text-xbox-red text-sm mt-1">{errors.atividade.message}</p>}
+            {errors.atividade && <p className="text-[var(--error)] text-xs mt-1">{errors.atividade.message}</p>}
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Detalhamento de Pontos</h3>
+          {/* Meta Diária Configurável */}
+          <div className="bg-[var(--bg-tertiary)] p-4 rounded border border-[var(--border-subtle)]">
+            <label className="flex items-center gap-2 xbox-label mb-2">
+              <Target className="h-4 w-4 text-[var(--xbox-green)]" />
+              Meta Diária (pontos)
+            </label>
+            <input
+              type="number"
+              value={metaDiaria}
+              onChange={(e) => setMetaDiaria(Number(e.target.value) || 0)}
+              className="xbox-input"
+              min="1"
+              placeholder="150"
+            />
+            <p className="text-xs text-[var(--text-muted)] mt-1">
+              O checkbox será marcado automaticamente quando atingir esta meta
+            </p>
+          </div>
+
+          {/* Detalhamento de Pontos */}
+          <div className="bg-[var(--bg-tertiary)] p-4 rounded border border-[var(--border-subtle)]">
+            <h3 className="xbox-label mb-4">Detalhamento de Pontos</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-800 mb-1">PC Busca</label>
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
+                  <Monitor className="h-4 w-4" />
+                  PC Busca
+                </label>
                 <input
                   type="number"
                   {...register('pc_busca', { valueAsNumber: true })}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-xbox-green focus:border-transparent"
+                  className="xbox-input"
                   min="0"
                   placeholder="0"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-800 mb-1">Mobile Busca</label>
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
+                  <Smartphone className="h-4 w-4" />
+                  Mobile Busca
+                </label>
                 <input
                   type="number"
                   {...register('mobile_busca', { valueAsNumber: true })}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-xbox-green focus:border-transparent"
+                  className="xbox-input"
                   min="0"
                   placeholder="0"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-800 mb-1">Quiz</label>
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
+                  <Brain className="h-4 w-4" />
+                  Quiz
+                </label>
                 <input
                   type="number"
                   {...register('quiz', { valueAsNumber: true })}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-xbox-green focus:border-transparent"
+                  className="xbox-input"
                   min="0"
                   placeholder="0"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-800 mb-1">Xbox</label>
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
+                  <Gamepad2 className="h-4 w-4" />
+                  Xbox
+                </label>
                 <input
                   type="number"
                   {...register('xbox', { valueAsNumber: true })}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-xbox-green focus:border-transparent"
+                  className="xbox-input"
                   min="0"
                   placeholder="0"
                 />
@@ -168,45 +218,58 @@ export default function RegistroModal({ isOpen, onClose }: RegistroModalProps) {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
+          {/* Meta Checkbox - Agora automático */}
+          <div className="flex items-center gap-3">
             <input
               type="checkbox"
               {...register('meta_batida')}
-              className="w-4 h-4 text-xbox-green bg-gray-100 border-gray-300 rounded focus:ring-xbox-green focus:ring-2"
+              className="xbox-checkbox"
+              checked={watchedValues.meta_batida}
+              onChange={(e) => setValue('meta_batida', e.target.checked)}
             />
-            <label className="text-sm font-medium text-gray-900">
-              Meta diária alcançada (150+ pontos)
+            <label className="text-sm text-[var(--text-secondary)]">
+              Meta diária alcançada ({metaDiaria}+ pontos)
             </label>
           </div>
 
+          {/* Notas */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Notas (opcional)</label>
+            <label className="xbox-label">Notas (opcional)</label>
             <textarea
               {...register('notas')}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors resize-none"
+              className="xbox-input resize-none"
               rows={3}
               placeholder="Adicione observações sobre sua atividade..."
             />
           </div>
 
-          <div className="bg-xbox-green bg-opacity-10 p-4 rounded-lg border border-xbox-green border-opacity-20">
+          {/* Total de Pontos */}
+          <div className={`p-4 rounded border ${metaAlcancada ? 'bg-[var(--xbox-green)]/10 border-[var(--xbox-green)]/30' : 'bg-[var(--bg-tertiary)] border-[var(--border-subtle)]'}`}>
             <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-gray-900">Total de Pontos:</span>
-              <span className="text-2xl font-bold text-xbox-green">{calculateTotal()}</span>
+              <div>
+                <span className="xbox-label">Total de Pontos</span>
+                {metaAlcancada && (
+                  <p className="text-xs text-[var(--xbox-green)] mt-1">✓ Meta de {metaDiaria} pontos alcançada!</p>
+                )}
+              </div>
+              <span className={`text-3xl font-bold ${metaAlcancada ? 'text-[var(--xbox-green)]' : 'text-white'}`}>
+                {totalPts}
+              </span>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 bg-xbox-green hover:bg-xbox-green/90 text-white py-3 px-6 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+              className="xbox-btn xbox-btn-primary flex-1"
             >
               💾 Salvar Registro
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold transition-colors"
+              className="xbox-btn xbox-btn-outline"
             >
               Cancelar
             </button>

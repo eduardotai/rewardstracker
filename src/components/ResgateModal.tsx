@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { X } from 'lucide-react'
+import { X, Gift, CreditCard, Calculator } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const resgateSchema = z.object({
@@ -43,7 +43,7 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
     try {
       if (mode === 'add') {
         const { supabase } = await import('@/lib/supabase')
-        
+
         const { error } = await supabase
           .from('resgates')
           .insert([
@@ -55,15 +55,14 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
               custo_efetivo: custoEfetivo,
             }
           ])
-        
+
         if (error) throw error
         toast.success('Resgate adicionado com sucesso!')
       } else {
-        // Simular apenas mostra o cálculo
         toast.success(`Simulação: ${custoEfetivo} pts por R$1`)
       }
       onClose()
-    } catch (error) {
+    } catch {
       toast.error('Erro ao processar resgate')
     }
   }
@@ -78,32 +77,42 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200">
+    <div className="xbox-modal-overlay" onClick={onClose}>
+      <div className="xbox-modal p-6" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {mode === 'add' ? '💳 Adicionar Resgate' : '🎁 Simular Resgate'}
+          <h2 className="text-xl font-bold text-white flex items-center gap-3">
+            <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
+              {mode === 'add' ? <CreditCard className="h-5 w-5 text-[var(--xbox-green)]" /> : <Gift className="h-5 w-5 text-[var(--xbox-green)]" />}
+            </div>
+            {mode === 'add' ? 'Adicionar Resgate' : 'Simular Resgate'}
           </h2>
-          <button onClick={onClose} className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded-full transition-colors">
-            <X size={24} />
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-[var(--bg-tertiary)] rounded transition-colors text-[var(--text-secondary)] hover:text-white"
+          >
+            <X size={20} />
           </button>
         </div>
 
+        {/* Inventory Selection (Simulate mode only) */}
         {mode === 'simulate' && (
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">🛍️ Inventory BRL</h3>
+            <label className="xbox-label mb-3 block">Inventory BRL</label>
             <div className="space-y-2">
               {inventory.map((item) => (
                 <button
                   key={item.name}
+                  type="button"
                   onClick={() => selectItem(item)}
-                  className={`w-full p-3 border rounded-lg text-left hover:shadow-md transition-all ${
-                    selectedItem === item.name ? 'border-xbox-green bg-xbox-light' : 'border-gray-300 hover:border-xbox-green'
-                  }`}
+                  className={`w-full p-4 rounded text-left transition-all border ${selectedItem === item.name
+                      ? 'border-[var(--xbox-green)] bg-[var(--xbox-green)]/10'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:border-[var(--xbox-green)]/50'
+                    }`}
                 >
-                  <div className="flex justify-between">
-                    <span className="font-medium text-gray-900">{item.name}</span>
-                    <span className="text-sm font-semibold text-xbox-green">{item.pts} pts</span>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-white">{item.name}</span>
+                    <span className="text-sm font-bold text-[var(--xbox-green)]">{item.pts.toLocaleString()} pts</span>
                   </div>
                 </button>
               ))}
@@ -111,59 +120,68 @@ export default function ResgateModal({ isOpen, onClose, mode }: ResgateModalProp
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Item */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Item</label>
+            <label className="xbox-label">Item</label>
             <input
               {...register('item')}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors"
+              className="xbox-input"
               placeholder="Ex: R$5 Gift Card"
             />
-            {errors.item && <p className="text-xbox-red text-sm mt-1">{errors.item.message}</p>}
+            {errors.item && <p className="text-[var(--error)] text-xs mt-1">{errors.item.message}</p>}
           </div>
 
+          {/* Pontos Usados */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Pontos Usados</label>
+            <label className="xbox-label">Pontos Usados</label>
             <input
               type="number"
               {...register('pts_usados', { valueAsNumber: true })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors"
+              className="xbox-input"
               min="1"
             />
-            {errors.pts_usados && <p className="text-xbox-red text-sm mt-1">{errors.pts_usados.message}</p>}
+            {errors.pts_usados && <p className="text-[var(--error)] text-xs mt-1">{errors.pts_usados.message}</p>}
           </div>
 
+          {/* Valor BRL */}
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Valor BRL</label>
+            <label className="xbox-label">Valor BRL</label>
             <input
               type="number"
               step="0.01"
               {...register('valor_brl', { valueAsNumber: true })}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-xbox-green focus:border-transparent transition-colors"
+              className="xbox-input"
               min="0.01"
             />
-            {errors.valor_brl && <p className="text-xbox-red text-sm mt-1">{errors.valor_brl.message}</p>}
+            {errors.valor_brl && <p className="text-[var(--error)] text-xs mt-1">{errors.valor_brl.message}</p>}
           </div>
 
+          {/* Custo Efetivo */}
           {watchedPts > 0 && watchedBrl > 0 && (
-            <div className="bg-xbox-light border-l-4 border-xbox-green p-4 rounded-lg">
-              <p className="text-sm text-gray-900">
-                <strong>Custo Efetivo:</strong> <span className="text-xbox-green font-semibold">{custoEfetivo} pts</span> por R$1
-              </p>
+            <div className="p-4 rounded border border-[var(--xbox-green)]/30 bg-[var(--xbox-green)]/10">
+              <div className="flex items-center gap-3">
+                <Calculator className="h-5 w-5 text-[var(--xbox-green)]" />
+                <div>
+                  <p className="xbox-label mb-0">Custo Efetivo</p>
+                  <p className="text-lg font-bold text-[var(--xbox-green)]">{custoEfetivo} pts <span className="text-sm font-normal text-[var(--text-secondary)]">por R$1</span></p>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="flex gap-2 pt-2">
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 bg-xbox-green text-white py-3 rounded-lg hover:bg-opacity-90 transition-all font-semibold"
+              className="xbox-btn xbox-btn-primary flex-1"
             >
               {mode === 'add' ? 'Adicionar' : 'Simular'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 transition-all font-semibold"
+              className="xbox-btn xbox-btn-outline"
             >
               Cancelar
             </button>

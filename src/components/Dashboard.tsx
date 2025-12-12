@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
-import { Trophy, TrendingUp, Calendar, Target, Plus } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
+import { Trophy, TrendingUp, Calendar, Target, Plus, Gift, BarChart3, Menu, X as CloseIcon, Home, Activity, PiggyBank, User } from 'lucide-react'
 import { Tooltip as ReactTooltip } from 'react-tooltip'
 import RegistroModal from './RegistroModal'
 import Badges from './Badges'
@@ -18,201 +18,314 @@ const mockData = [
   { day: 'Dom', pts: 300 },
 ]
 
+const navItems = [
+  { icon: Home, label: 'Dashboard', href: '/', active: true },
+  { icon: Activity, label: 'Atividades', href: '/atividades', active: false },
+  { icon: BarChart3, label: 'Gráficos', href: '/graficos', active: false },
+  { icon: PiggyBank, label: 'Resgates', href: '/resgates', active: false },
+  { icon: User, label: 'Perfil', href: '/perfil', active: false },
+]
+
 export default function Dashboard() {
-  // Dynamic calculations from mock data
   const totalSaldo = mockData.reduce((sum, day) => sum + day.pts, 0)
   const mediaDiaria = Math.round(totalSaldo / mockData.length)
   const progress = Math.min(Math.round((totalSaldo / 12000) * 100), 100)
-  const streak = mockData.filter(day => day.pts >= 150).length // Assuming 150 is meta
+  const streak = mockData.filter(day => day.pts >= 150).length
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen p-6">
-      <header className="mb-12 text-center">
-        <h1 className="text-5xl font-bold text-xbox-green mb-2">🎮 Rewards Tracker BR</h1>
-        <p className="text-lg text-gray-700 font-medium">Maximize seus pontos Microsoft Rewards no Brasil</p>
-      </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-        <div
-          className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-xbox-green"
-          data-tooltip-id="saldo-tooltip"
-          data-tooltip-content="Seu saldo total de pontos acumulados"
-        >
-          <div className="flex items-center">
-            <div className="p-3 bg-xbox-green bg-opacity-10 rounded-full mr-4">
-              <Trophy className="h-8 w-8 text-xbox-green" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Saldo Atual</p>
-              <p className="text-3xl font-bold text-gray-900">{totalSaldo.toLocaleString()} pts</p>
-            </div>
-          </div>
+    <div className="min-h-screen flex">
+      {/* Sidebar - Desktop */}
+      <aside className="hidden lg:flex flex-col w-64 border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+        {/* Logo */}
+        <div className="p-6 border-b border-[var(--border-subtle)]">
+          <h1 className="text-xl font-bold text-[var(--xbox-green)] flex items-center gap-2">
+            <Gift className="h-6 w-6" />
+            Rewards Tracker
+          </h1>
         </div>
 
-        <div
-          className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-xbox-blue"
-          data-tooltip-id="progress-tooltip"
-          data-tooltip-content="Progresso para alcançar 12.000 pontos mensais"
-        >
-          <div className="flex items-center">
-            <div className="p-3 bg-xbox-blue bg-opacity-10 rounded-full mr-4">
-              <Target className="h-8 w-8 text-xbox-blue" />
+        {/* Navigation */}
+        <nav className="flex-1 p-4">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.label}>
+                <a
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
+                      ? 'bg-[var(--bg-tertiary)] text-white'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                    }`}
+                >
+                  {item.active && <span className="xbox-nav-indicator" />}
+                  <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Quick Stats Footer */}
+        <div className="p-4 border-t border-[var(--border-subtle)]">
+          <div className="xbox-card p-4">
+            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide mb-2">Saldo Total</p>
+            <p className="text-2xl font-bold text-[var(--xbox-green)]">{totalSaldo.toLocaleString()}</p>
+            <p className="text-xs text-[var(--text-secondary)]">pontos</p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setIsSidebarOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)]">
+            <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between">
+              <h1 className="text-xl font-bold text-[var(--xbox-green)] flex items-center gap-2">
+                <Gift className="h-6 w-6" />
+                Rewards
+              </h1>
+              <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-[var(--bg-tertiary)] rounded">
+                <CloseIcon className="h-5 w-5" />
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Progresso Meta</p>
-              <div className="w-full bg-gray-200 rounded-full h-3 mt-3 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-xbox-green to-xbox-blue h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                ></div>
+            <nav className="p-4">
+              <ul className="space-y-1">
+                {navItems.map((item) => (
+                  <li key={item.label}>
+                    <a
+                      href={item.href}
+                      className={`flex items-center gap-3 px-4 py-3 rounded text-sm font-medium transition-all relative ${item.active
+                          ? 'bg-[var(--bg-tertiary)] text-white'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
+                        }`}
+                    >
+                      {item.active && <span className="xbox-nav-indicator" />}
+                      <item.icon className={`h-5 w-5 ${item.active ? 'text-[var(--xbox-green)]' : ''}`} />
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </aside>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-subtle)] p-4 flex items-center justify-between">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 hover:bg-[var(--bg-tertiary)] rounded"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <h1 className="text-lg font-bold text-[var(--xbox-green)] flex items-center gap-2">
+            <Gift className="h-5 w-5" />
+            Rewards Tracker
+          </h1>
+          <div className="w-10" /> {/* Spacer */}
+        </header>
+
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          {/* Dashboard Header */}
+          <header className="mb-8">
+            <h2 className="text-3xl font-bold text-white mb-2">Dashboard</h2>
+            <p className="text-[var(--text-secondary)]">Acompanhe seu progresso no Microsoft Rewards</p>
+          </header>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Card Saldo Atual */}
+            <div
+              className="xbox-card p-6"
+              data-tooltip-id="saldo-tooltip"
+              data-tooltip-content="Seu saldo total de pontos acumulados"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
+                  <Trophy className="h-5 w-5 text-[var(--xbox-green)]" />
+                </div>
               </div>
-              <p className="text-sm font-semibold text-xbox-green mt-2">{progress}% concluído</p>
+              <p className="xbox-label">Saldo Atual</p>
+              <p className="text-2xl font-bold text-white">{totalSaldo.toLocaleString()} <span className="text-sm text-[var(--text-muted)]">pts</span></p>
+            </div>
+
+            {/* Card Progresso Meta */}
+            <div
+              className="xbox-card p-6"
+              data-tooltip-id="progress-tooltip"
+              data-tooltip-content="Progresso para alcançar 12.000 pontos mensais"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
+                  <Target className="h-5 w-5 text-[var(--xbox-green)]" />
+                </div>
+                <span className="text-sm font-semibold text-[var(--xbox-green)]">{progress}%</span>
+              </div>
+              <p className="xbox-label">Progresso Meta</p>
+              <div className="xbox-progress mt-2">
+                <div className="xbox-progress-bar" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mt-2">{totalSaldo.toLocaleString()} / 12.000 pts</p>
+            </div>
+
+            {/* Card Streak */}
+            <div
+              className="xbox-card p-6"
+              data-tooltip-id="streak-tooltip"
+              data-tooltip-content="Dias consecutivos de atividade"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
+                  <Calendar className="h-5 w-5 text-[var(--xbox-green)]" />
+                </div>
+              </div>
+              <p className="xbox-label">Streak</p>
+              <p className="text-2xl font-bold text-white">{streak} <span className="text-sm text-[var(--text-muted)]">dias</span></p>
+            </div>
+
+            {/* Card Média Diária */}
+            <div
+              className="xbox-card p-6"
+              data-tooltip-id="media-tooltip"
+              data-tooltip-content="Média de pontos ganhos por dia"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2 bg-[var(--xbox-green)]/10 rounded">
+                  <TrendingUp className="h-5 w-5 text-[var(--xbox-green)]" />
+                </div>
+              </div>
+              <p className="xbox-label">Média Diária</p>
+              <p className="text-2xl font-bold text-white">{mediaDiaria} <span className="text-sm text-[var(--text-muted)]">pts</span></p>
             </div>
           </div>
-        </div>
 
-        <div
-          className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-xbox-yellow"
-          data-tooltip-id="streak-tooltip"
-          data-tooltip-content="Dias consecutivos de atividade"
-        >
-          <div className="flex items-center">
-            <div className="p-3 bg-xbox-yellow bg-opacity-10 rounded-full mr-4">
-              <Calendar className="h-8 w-8 text-xbox-yellow" />
+          {/* Chart Section */}
+          <div className="xbox-card p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-[var(--xbox-green)]" />
+                Pontos Últimos 7 Dias
+              </h3>
             </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Streak</p>
-              <p className="text-3xl font-bold text-gray-900">{streak} dias</p>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={mockData}>
+                <RechartsTooltip
+                  contentStyle={{
+                    background: 'var(--bg-elevated)',
+                    borderColor: 'var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                  itemStyle={{ color: 'var(--text-primary)' }}
+                  labelStyle={{ color: 'var(--text-secondary)' }}
+                />
+                <XAxis
+                  dataKey="day"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: 'var(--text-muted)' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="pts"
+                  stroke="var(--xbox-green)"
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--xbox-green)', stroke: 'var(--bg-secondary)', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: 'var(--xbox-green)', fill: '#fff' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Bottom Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Registros Recentes */}
+            <div className="lg:col-span-2 xbox-card p-6">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-[var(--xbox-green)]" />
+                Registros Recentes
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="xbox-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Atividade</th>
+                      <th className="text-right">Pontos</th>
+                      <th className="text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="text-white">12 Dez 2024</td>
+                      <td className="text-[var(--text-secondary)]">Buscas + Quiz</td>
+                      <td className="text-right font-semibold text-[var(--xbox-green)]">150</td>
+                      <td className="text-center">
+                        <span className="xbox-badge xbox-badge-success">✓ Alcançada</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="text-white">11 Dez 2024</td>
+                      <td className="text-[var(--text-secondary)]">Xbox</td>
+                      <td className="text-right font-semibold text-[var(--xbox-green)]">100</td>
+                      <td className="text-center">
+                        <span className="xbox-badge xbox-badge-success">✓ Alcançada</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="text-white">10 Dez 2024</td>
+                      <td className="text-[var(--text-secondary)]">Buscas</td>
+                      <td className="text-right font-semibold text-[var(--error)]">50</td>
+                      <td className="text-center">
+                        <span className="xbox-badge xbox-badge-error">✗ Pendente</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Sidebar Content */}
+            <div className="space-y-6">
+              <Badges />
+              <Leaderboard />
             </div>
           </div>
-        </div>
 
-        <div
-          className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-xbox-green"
-          data-tooltip-id="media-tooltip"
-          data-tooltip-content="Média de pontos ganhos por dia"
-        >
-          <div className="flex items-center">
-            <div className="p-3 bg-xbox-green bg-opacity-10 rounded-full mr-4">
-              <TrendingUp className="h-8 w-8 text-xbox-green" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">Média Diária</p>
-              <p className="text-3xl font-bold text-gray-900">{mediaDiaria} pts</p>
-            </div>
+          {/* Floating Action Button */}
+          <div className="fixed bottom-8 right-8">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="xbox-btn xbox-btn-primary px-6 py-4 text-lg animate-pulse-glow"
+              data-tooltip-id="log-tooltip"
+              data-tooltip-content="Registre suas atividades diárias"
+            >
+              <Plus className="h-5 w-5" />
+              Log Hoje
+            </button>
           </div>
         </div>
-      </div>
+      </main>
 
-      <div className="bg-white p-8 rounded-xl shadow-lg mb-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-          <TrendingUp className="h-6 w-6 text-xbox-blue mr-3" />
-          Pontos Últimos 7 Dias
-        </h2>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={mockData}>
-            <XAxis
-              dataKey="day"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 12, fill: '#6B7280' }}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 12, fill: '#6B7280' }}
-            />
-            <Line
-              type="monotone"
-              dataKey="pts"
-              stroke="#107C10"
-              strokeWidth={3}
-              dot={{ fill: '#107C10', strokeWidth: 2, r: 6 }}
-              activeDot={{ r: 8, fill: '#0078D4' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        <div className="lg:col-span-2">
-          <div className="bg-white p-8 rounded-xl shadow-lg">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <Calendar className="h-6 w-6 text-xbox-green mr-3" />
-              Registros Recentes
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Data</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900">Atividade</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900">Pontos</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-900">Meta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4 text-gray-900">12 Dez 2024</td>
-                    <td className="py-4 px-4 text-gray-900">Buscas + Quiz</td>
-                    <td className="py-4 px-4 text-right font-semibold text-xbox-green">150</td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Alcançada
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4 text-gray-900">11 Dez 2024</td>
-                    <td className="py-4 px-4 text-gray-900">Xbox</td>
-                    <td className="py-4 px-4 text-right font-semibold text-xbox-green">100</td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Alcançada
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-4 text-gray-900">10 Dez 2024</td>
-                    <td className="py-4 px-4 text-gray-900">Buscas</td>
-                    <td className="py-4 px-4 text-right font-bold text-xbox-green">50</td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        ✗ Pendente
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-8">
-          <Badges />
-          <Leaderboard />
-        </div>
-      </div>
-
-      <div className="text-center">
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-xbox-green hover:bg-xbox-green/90 text-white px-12 py-5 rounded-xl text-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center mx-auto"
-          data-tooltip-id="log-tooltip"
-          data-tooltip-content="Registre suas atividades diárias para ganhar pontos"
-        >
-          <Plus className="h-6 w-6 mr-3" />
-          Log Hoje
-        </button>
-      </div>
-
-      <ReactTooltip id="saldo-tooltip" place="top" className="max-w-xs" />
-      <ReactTooltip id="progress-tooltip" place="top" className="max-w-xs" />
-      <ReactTooltip id="streak-tooltip" place="top" className="max-w-xs" />
-      <ReactTooltip id="media-tooltip" place="top" className="max-w-xs" />
-      <ReactTooltip id="log-tooltip" place="top" className="max-w-xs" />
+      {/* Tooltips */}
+      <ReactTooltip id="saldo-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
+      <ReactTooltip id="progress-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
+      <ReactTooltip id="streak-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
+      <ReactTooltip id="media-tooltip" place="top" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
+      <ReactTooltip id="log-tooltip" place="left" className="!bg-[var(--bg-elevated)] !text-white !border !border-[var(--border-subtle)]" />
 
       <RegistroModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>

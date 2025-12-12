@@ -10,14 +10,14 @@ module.exports = {
       colors: {
         xbox: {
           green: '#107C10',
-          blue: '#0078D4',
-          yellow: '#FFB900',
-          red: '#D13438',
-          light: '#F0F8F0',
+          'dark-gray': '#2d2d2d',
+          'light-gray': '#e0e0e0',
+          white: '#ffffff',
+          black: '#000000',
         },
       },
       fontFamily: {
-        sans: ['Segoe UI', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
     },
   },

@@ -1,31 +1,377 @@
 @import "tailwindcss";
 
+/* ========================================
+   XBOX DESIGN SYSTEM
+   ======================================== */
+
 :root {
-  --background: linear-gradient(135deg, #F0F8F0 0%, #ffffff 100%);
-  --foreground: #171717;
+  /* Core XBOX Colors */
   --xbox-green: #107C10;
-  --xbox-blue: #0078D4;
-  --xbox-yellow: #FFB900;
-  --xbox-red: #D13438;
+  --xbox-green-light: #2D9C2D;
+  --xbox-green-dark: #0A5C0A;
+  --xbox-green-glow: rgba(16, 124, 16, 0.4);
+  
+  /* Background Colors */
+  --bg-primary: #0d0d0d;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #242424;
+  --bg-elevated: #2d2d2d;
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-muted: #737373;
+  
+  /* Border & Accent */
+  --border-subtle: #333333;
+  --border-focus: var(--xbox-green);
+  
+  /* Status Colors */
+  --success: #2E7D32;
+  --warning: #F9A825;
+  --error: #C62828;
+  
+  /* Shadows */
+  --shadow-glow: 0 0 20px var(--xbox-green-glow);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ========================================
+   BASE STYLES
+   ======================================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--xbox-green) var(--bg-secondary);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-    --foreground: #ededed;
-  }
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--xbox-green);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--xbox-green-light);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Cards */
+.xbox-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.xbox-card:hover {
+  border-color: var(--xbox-green);
+  box-shadow: var(--shadow-glow);
+}
+
+.xbox-card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+
+/* Buttons */
+.xbox-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.xbox-btn-primary {
+  background: var(--xbox-green);
+  color: white;
+}
+
+.xbox-btn-primary:hover {
+  background: var(--xbox-green-light);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+.xbox-btn-primary:active {
+  transform: translateY(0);
+}
+
+.xbox-btn-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 2px solid var(--border-subtle);
+}
+
+.xbox-btn-outline:hover {
+  border-color: var(--xbox-green);
+  color: var(--xbox-green);
+}
+
+.xbox-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.xbox-btn-ghost:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Inputs */
+.xbox-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.xbox-input::placeholder {
+  color: var(--text-muted);
+}
+
+.xbox-input:focus {
+  outline: none;
+  border-color: var(--xbox-green);
+  box-shadow: 0 0 0 2px var(--xbox-green-glow);
+}
+
+.xbox-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.xbox-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+}
+
+/* Labels */
+.xbox-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+/* Glow Effects */
+.xbox-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+.xbox-glow-text {
+  text-shadow: 0 0 20px var(--xbox-green-glow);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--xbox-green-glow);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--xbox-green-glow);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.xbox-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 50%,
+    var(--bg-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Progress Bar */
+.xbox-progress {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.xbox-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--xbox-green-dark), var(--xbox-green), var(--xbox-green-light));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+/* Divider */
+.xbox-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 1rem 0;
+}
+
+/* Modal Overlay */
+.xbox-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.xbox-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  width: 100%;
+  max-width: 32rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-card);
+}
+
+/* Badge */
+.xbox-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.xbox-badge-success {
+  background: rgba(46, 125, 50, 0.2);
+  color: #4CAF50;
+  border: 1px solid rgba(46, 125, 50, 0.3);
+}
+
+.xbox-badge-error {
+  background: rgba(198, 40, 40, 0.2);
+  color: #EF5350;
+  border: 1px solid rgba(198, 40, 40, 0.3);
+}
+
+.xbox-badge-warning {
+  background: rgba(249, 168, 37, 0.2);
+  color: #FFC107;
+  border: 1px solid rgba(249, 168, 37, 0.3);
+}
+
+/* Navigation Active Indicator */
+.xbox-nav-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--xbox-green);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Table */
+.xbox-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.xbox-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.xbox-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.xbox-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.xbox-table tbody tr:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Checkbox */
+.xbox-checkbox {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-subtle);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.xbox-checkbox:checked {
+  background: var(--xbox-green);
+  border-color: var(--xbox-green);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+  background-size: 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.xbox-checkbox:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--xbox-green-glow);
 }
