@@ -118,47 +118,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [guestData, setGuestData] = useState<GuestData | null>(getInitialGuestData)
 
     const fetchProfile = async (userId: string, userEmail?: string) => {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle() // Use maybeSingle to avoid 406 error when profile doesn't exist
+        try {
+            console.log('AuthContext: Fetching profile for user:', userId)
 
-        if (error) {
-            console.error('Error fetching profile:', error)
-            return
-        }
-
-        if (data) {
-            setProfile(data)
-        } else if (userEmail) {
-            // Profile doesn't exist, create one for new users
-            const newProfile = {
-                id: userId,
-                email: userEmail,
-                display_name: userEmail.split('@')[0],
-                tier: 'Sem',
-                level: 2, // Default to Level 2
-                meta_mensal: 12000,
-            }
-
-            const { data: createdProfile, error: createError } = await supabase
+            const { data, error } = await supabase
                 .from('profiles')
-                .insert([newProfile])
-                .select()
-                .single()
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle()
 
-            if (!createError && createdProfile) {
-                setProfile(createdProfile as UserProfile) // Cast to ensure level is recognized
-            } else {
-                console.error('Error creating profile:', createError)
+            if (error) {
+                console.error('AuthContext: Error fetching profile:', error)
+                return null
             }
+
+            if (data) {
+                console.log('AuthContext: Profile found')
+                setProfile(data)
+                return data
+            } else if (userEmail) {
+                console.log('AuthContext: Profile not found, creating new one')
+
+                // Profile doesn't exist, create one for new users
+                const newProfile = {
+                    id: userId,
+                    email: userEmail,
+                    display_name: userEmail.split('@')[0],
+                    tier: 'Sem',
+                    level: 2, // Default to Level 2
+                    meta_mensal: 12000,
+                }
+
+                const { data: createdProfile, error: createError } = await supabase
+                    .from('profiles')
+                    .insert([newProfile])
+                    .select()
+                    .single()
+
+                if (!createError && createdProfile) {
+                    console.log('AuthContext: Profile created successfully')
+                    setProfile(createdProfile as UserProfile)
+                    return createdProfile
+                } else {
+                    console.error('AuthContext: Error creating profile:', createError)
+                    return null
+                }
+            }
+
+            return null
+        } catch (error) {
+            console.error('AuthContext: Unexpected error in fetchProfile:', error)
+            return null
         }
     }
 
     const refreshProfile = async () => {
-        if (user) {
-            await fetchProfile(user.id)
+        if (user && !loading) {
+            console.log('AuthContext: Refreshing profile for user:', user.id)
+            await fetchProfile(user.id, user.email)
         }
     }
 
@@ -191,34 +208,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     useEffect(() => {
-        // Safety timeout to prevent infinite loading
+        let isMounted = true
+        let profileOperationInProgress = false
+
+        // Safety timeout to prevent infinite loading - increased to 15 seconds
         const timeout = setTimeout(() => {
-            if (loading) {
-                console.log('AuthContext: Loading timed out, forcing false')
+            if (isMounted && loading && !profileOperationInProgress) {
+                console.log('AuthContext: Loading timed out after 15s, forcing false')
                 setLoading(false)
             }
-        }, 5000)
-
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                fetchProfile(session.user.id, session.user.email)
-            }
-            setLoading(false)
-            clearTimeout(timeout)
-        }).catch(err => {
-            console.error('AuthContext: GetSession error', err)
-            setLoading(false)
-        })
+        }, 15000)
 
         // Track last user ID to prevent unnecessary updates/refetches on window focus
         const lastUserId = { current: user?.id }
 
+        // Function to handle profile operations
+        const handleProfileOperation = async (userId: string, userEmail?: string) => {
+            if (profileOperationInProgress) return
+            profileOperationInProgress = true
+
+            try {
+                await fetchProfile(userId, userEmail)
+            } finally {
+                profileOperationInProgress = false
+                if (isMounted) {
+                    setLoading(false)
+                }
+            }
+        }
+
+        // Get initial session
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (!isMounted) return
+
+            setSession(session)
+            setUser(session?.user ?? null)
+
+            if (session?.user) {
+                await handleProfileOperation(session.user.id, session.user.email)
+            } else {
+                setLoading(false)
+            }
+
+            clearTimeout(timeout)
+        }).catch(err => {
+            console.error('AuthContext: GetSession error', err)
+            if (isMounted) {
+                setLoading(false)
+            }
+        })
+
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                if (!isMounted) return
+
                 console.log('AuthContext: Auth State Change:', event, session?.user?.email)
 
                 // Always update session for token refresh
@@ -236,19 +280,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         // Clear guest mode when logging in
                         localStorage.removeItem(GUEST_STORAGE_KEY)
                         setIsGuest(false)
-                        await fetchProfile(session.user.id, session.user.email)
+                        await handleProfileOperation(session.user.id, session.user.email)
                     } else {
                         setProfile(null)
+                        setLoading(false)
                     }
                 } else {
                     console.log('AuthContext: User unchanged, skipping update logic.')
+                    setLoading(false)
                 }
-
-                setLoading(false)
             }
         )
 
         return () => {
+            isMounted = false
             clearTimeout(timeout)
             subscription.unsubscribe()
         }

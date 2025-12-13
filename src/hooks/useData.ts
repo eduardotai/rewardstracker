@@ -6,22 +6,27 @@ interface UserStats {
     mediaDiaria: number
 }
 
-const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 30000, retries: number = 2): Promise<T> => {
+const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 10000, retries: number = 1): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
         let timeoutId: NodeJS.Timeout
         try {
+            const start = Date.now()
             const promise = promiseFactory()
             const timeoutPromise = new Promise<T>((_, reject) => {
-                timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms)
+                timeoutId = setTimeout(() => reject(new Error(`Request timed out after ${ms}ms`)), ms)
             })
             const result = await Promise.race([promise, timeoutPromise])
             clearTimeout(timeoutId!)
-            // console.log(`Request took ${Date.now() - start}ms`)
+            console.log(`useData: Request completed successfully in ${Date.now() - start}ms`)
             return result
         } catch (error) {
             clearTimeout(timeoutId!)
+            console.log(`useData: Request attempt ${i + 1} failed:`, error)
             const isLastAttempt = i === retries
-            if (isLastAttempt) throw error
+            if (isLastAttempt) {
+                console.error('useData: All retry attempts failed:', error)
+                throw error
+            }
 
             // Wait before retrying (exponential backoff: 1s, 2s)
             const delay = 1000 * Math.pow(2, i)
