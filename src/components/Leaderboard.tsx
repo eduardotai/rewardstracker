@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Crown, Medal, Award, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchLeaderboardData } from '@/hooks/useData'
+import { isSupabaseConfigured } from '@/lib/supabase'
 
 const leaderboard = [
   { rank: 1, name: 'Você', pts: 8500, tier: 'Essential', isCurrentUser: false },
@@ -22,6 +23,12 @@ export default function Leaderboard() {
     async function loadLeaderboard() {
       if (isGuest) {
         // In guest mode, show mock data but highlight "Você" as guest
+        setLoading(false)
+        return
+      }
+
+      // Check if Supabase is properly configured before making API calls
+      if (!isSupabaseConfigured()) {
         setLoading(false)
         return
       }

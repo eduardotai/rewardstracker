@@ -5,6 +5,13 @@ import { createBrowserClient } from '@supabase/ssr'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
 
+// Check if Supabase is properly configured (not using placeholder values)
+export const isSupabaseConfigured = () => {
+    return supabaseUrl !== 'https://placeholder.supabase.co' &&
+           supabaseAnonKey !== 'placeholder-anon-key' &&
+           supabaseUrl.includes('.supabase.co')
+}
+
 // Create a browser client that handles cookies automatically
 // This ensures that the middleware (server-side) can read the session
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)

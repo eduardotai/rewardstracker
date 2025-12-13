@@ -6,6 +6,7 @@ import { Plus, Calculator, Home, Activity, BarChart3, PiggyBank, User, Gift, Men
 import ResgateModal from '@/components/ResgateModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchResgates, fetchUserStats } from '@/hooks/useData'
+import { isSupabaseConfigured } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 const navItems = [
@@ -52,6 +53,12 @@ export default function ResgatesPage() {
           setUserStats({ totalSaldo: currentBalance, mediaDiaria: media })
           setLoading(false)
         } else if (user) {
+          // Check if Supabase is properly configured before making API calls
+          if (!isSupabaseConfigured()) {
+            setLoading(false)
+            return
+          }
+
           // Load from Supabase
           const [resgatesRes, statsRes] = await Promise.all([
             fetchResgates(user.id),

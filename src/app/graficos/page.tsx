@@ -10,6 +10,7 @@ import {
 import { Calendar, Filter, Home, Activity, BarChart3, PiggyBank, User, Gift, Menu, X as CloseIcon, TrendingUp } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchDailyRecords, fetchResgates, DailyRecord, Resgate } from '@/hooks/useData'
+import { isSupabaseConfigured } from '@/lib/supabase'
 
 const navItems = [
   { icon: Home, label: 'Dashboard', href: '/', active: false },
@@ -42,6 +43,12 @@ export default function GraficosPage() {
           setResgates(guestData.resgates as unknown as Resgate[] || [])
           setLoading(false)
         } else if (user) {
+          // Check if Supabase is properly configured before making API calls
+          if (!isSupabaseConfigured()) {
+            setLoading(false)
+            return
+          }
+
           // Load from Supabase for authenticated users
           const [recordsRes, resgatesRes] = await Promise.all([
             fetchDailyRecords(user.id),

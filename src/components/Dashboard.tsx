@@ -8,6 +8,7 @@ import { Tooltip as ReactTooltip } from 'react-tooltip'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchWeeklyRecords, fetchUserStats, fetchDailyRecords, DailyRecord } from '@/hooks/useData'
+import { isSupabaseConfigured } from '@/lib/supabase'
 import Badges from './Badges'
 import Leaderboard from './Leaderboard'
 import { REWARDS_LIMITS } from '@/lib/rewards-constants'
@@ -183,6 +184,12 @@ export default function Dashboard() {
 
       // Not logged in and not guest
       if (!user) {
+        setDataLoading(false)
+        return
+      }
+
+      // Check if Supabase is properly configured before making API calls
+      if (!isSupabaseConfigured()) {
         setDataLoading(false)
         return
       }
