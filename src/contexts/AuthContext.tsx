@@ -98,7 +98,23 @@ const getInitialGuestData = (): GuestData | null => {
     const isGuestMode = localStorage.getItem(GUEST_STORAGE_KEY) === 'true'
     if (isGuestMode) {
         const savedData = localStorage.getItem(GUEST_DATA_KEY)
-        return savedData ? JSON.parse(savedData) : defaultGuestData
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData)
+                console.log('AuthContext: Loaded guest data from storage:', {
+                    registrosCount: parsed.registros?.length || 0,
+                    atividadesCount: parsed.atividades?.length || 0,
+                    resgatesCount: parsed.resgates?.length || 0,
+                    tier: parsed.profile?.tier
+                })
+                return parsed
+            } catch (e) {
+                console.error('AuthContext: Error parsing guest data from storage:', e)
+                return defaultGuestData
+            }
+        }
+        console.log('AuthContext: No guest data in storage, using defaults')
+        return defaultGuestData
     }
     return null
 }
@@ -210,8 +226,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             currentTier: guestData.profile?.tier
         })
 
+        // Create updated data with deep copy to prevent reference issues
         const updated = {
-            ...guestData,
+            registros: [...(guestData.registros || [])],
+            atividades: [...(guestData.atividades || [])],
+            resgates: [...(guestData.resgates || [])],
             profile: { ...guestData.profile, ...profileData }
         }
 
@@ -225,14 +244,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setGuestData(updated)
         localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(updated))
 
-        // Verify storage
+        // Verify storage immediately
         const stored = localStorage.getItem(GUEST_DATA_KEY)
         if (stored) {
-            const parsed = JSON.parse(stored)
-            console.log('AuthContext: verified storage:', {
-                registrosCount: parsed.registros?.length || 0,
-                tier: parsed.profile?.tier
-            })
+            try {
+                const parsed = JSON.parse(stored)
+                console.log('AuthContext: verified storage:', {
+                    registrosCount: parsed.registros?.length || 0,
+                    atividadesCount: parsed.atividades?.length || 0,
+                    resgatesCount: parsed.resgates?.length || 0,
+                    tier: parsed.profile?.tier
+                })
+
+                // Check for data corruption
+                if ((parsed.registros?.length || 0) !== (updated.registros?.length || 0)) {
+                    console.error('AuthContext: DATA CORRUPTION DETECTED! Storage differs from memory')
+                }
+            } catch (e) {
+                console.error('AuthContext: Error parsing stored data:', e)
+            }
         }
     }
 
