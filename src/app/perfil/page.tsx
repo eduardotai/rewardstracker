@@ -26,14 +26,10 @@ export default function PerfilPage() {
 
   // Load profile data
   useEffect(() => {
-    console.log('Perfil: useEffect triggered - isGuest:', isGuest, 'guestData:', !!guestData, 'profile:', !!profile)
-
     if (isGuest && guestData) {
-      console.log('Perfil: Loading guest data - tier:', guestData.profile.tier, 'registros:', guestData.registros?.length || 0)
       setTier(guestData.profile.tier)
       setMetaMensal(guestData.profile.meta_mensal)
     } else if (profile) {
-      console.log('Perfil: Loading profile data - tier:', profile.tier)
       setTier(profile.tier)
       setMetaMensal(profile.meta_mensal)
     }
@@ -50,47 +46,15 @@ export default function PerfilPage() {
 
   // Auto-save profile changes for guest
   const handleTierChange = async (newTier: string) => {
-    console.log('Perfil: Changing tier from', tier, 'to', newTier)
-    console.log('Perfil: isGuest:', isGuest, 'guestData exists:', !!guestData)
-
     // Prevent unnecessary updates
     if (newTier === tier) {
-      console.log('Perfil: Tier unchanged, skipping update')
       return
     }
 
     setTier(newTier)
 
     if (isGuest) {
-      console.log('Perfil: Updating guest profile, current guestData:', guestData)
       updateGuestProfile({ tier: newTier })
-
-      // Verify the data was saved correctly after a short delay
-      setTimeout(() => {
-        const savedData = localStorage.getItem('rewards_tracker_guest_data')
-        if (savedData) {
-          try {
-            const parsed = JSON.parse(savedData)
-            console.log('Perfil: Data after tier change:', {
-              registrosCount: parsed.registros?.length || 0,
-              atividadesCount: parsed.atividades?.length || 0,
-              resgatesCount: parsed.resgates?.length || 0,
-              tier: parsed.profile?.tier
-            })
-
-            // Check if data was actually preserved
-            const originalRegistrosCount = guestData?.registros?.length || 0
-            const savedRegistrosCount = parsed.registros?.length || 0
-            if (savedRegistrosCount === 0 && originalRegistrosCount > 0) {
-              console.error('Perfil: DATA LOSS DETECTED! Registros were reset from', originalRegistrosCount, 'to 0')
-            }
-          } catch (e) {
-            console.error('Perfil: Error parsing saved data:', e)
-          }
-        } else {
-          console.error('Perfil: No data found in localStorage after tier change!')
-        }
-      }, 100)
     } else if (user) {
       setSaving(true)
       const { error } = await supabase
