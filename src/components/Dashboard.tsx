@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { fetchWeeklyRecords, fetchUserStats, fetchDailyRecords, DailyRecord } from '@/hooks/useData'
 import Badges from './Badges'
 import Leaderboard from './Leaderboard'
-import { REWARDS_LIMITS, ACTIVITIES_LIST } from '@/lib/rewards-constants'
+import { REWARDS_LIMITS } from '@/lib/rewards-constants'
 
 const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
 
@@ -540,7 +540,7 @@ export default function Dashboard() {
                     ) : (
                       <tr>
                         <td colSpan={4} className="text-center text-[var(--text-muted)] py-8">
-                          Nenhum registro encontrado. Clique em "Log Hoje" para começar!
+                          Nenhum registro encontrado. Clique em &quot;Log Hoje&quot; para começar!
                         </td>
                       </tr>
                     )}

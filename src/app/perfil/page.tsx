@@ -100,10 +100,7 @@ export default function PerfilPage() {
 
     if (isGuest && guestData) {
       // Clear guest data but keep profile settings
-      const { updateGuestData } = await import('@/contexts/AuthContext').then(m => {
-        // Re-get context to call updateGuestData
-        return { updateGuestData: () => { } }
-      })
+      await import('@/contexts/AuthContext')
       localStorage.setItem('rewards_tracker_guest_data', JSON.stringify({
         registros: [],
         atividades: [],

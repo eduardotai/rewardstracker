@@ -4,14 +4,12 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Home, Activity, BarChart3, PiggyBank, User,
-  Check, Save, Monitor, Smartphone, Brain, Gamepad2, Gift, LogOut, Menu, X as CloseIcon, Calendar, Target, Plus
+  Check, Save, Monitor, Brain, Gamepad2, Gift, Menu, X as CloseIcon, Calendar, LogOut
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ACTIVITIES_LIST, REWARDS_LIMITS } from '@/lib/rewards-constants'
-import { fetchMonthlyStatus, insertDailyRecord, invalidateCache } from '@/hooks/useData'
+import { insertDailyRecord } from '@/hooks/useData'
 import toast from 'react-hot-toast'
-import { format, subDays, isSameDay } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 
 const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
 
@@ -24,7 +22,7 @@ const navItems = [
 ]
 
 export default function AtividadesPage() {
-  const { isGuest, user, profile, signout } = useAuth()
+  const { isGuest, user, profile } = useAuth()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -34,7 +32,6 @@ export default function AtividadesPage() {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({})
   const [notes, setNotes] = useState('')
   const [metaOverride, setMetaOverride] = useState(false)
-  const [metaGoal, setMetaGoal] = useState(150)
 
   // Logic to calculate points
   const userLevel = profile?.level || 2
@@ -60,6 +57,7 @@ export default function AtividadesPage() {
   }
 
   const totals = calculateTotals()
+  const metaGoal = profile?.meta_mensal || 12000
   const metaBatida = totals.total >= metaGoal || metaOverride
 
   // Toggle Item
@@ -132,7 +130,6 @@ export default function AtividadesPage() {
     }
   }
 
-  const displayName = isGuest ? 'Visitante' : (profile?.display_name || user?.email || 'Usuário')
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-primary)]">
@@ -363,7 +360,7 @@ export default function AtividadesPage() {
                       checked={metaOverride}
                       onChange={(e) => setMetaOverride(e.target.checked)}
                     />
-                    <span className="text-sm">Forçar "Meta Batida"</span>
+                    <span className="text-sm">Forçar &quot;Meta Batida&quot;</span>
                   </label>
 
                   <button

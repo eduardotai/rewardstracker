@@ -117,7 +117,6 @@ export default function GraficosPage() {
     resgates.forEach(r => {
       const date = new Date(r.data)
       const monthKey = `${date.getFullYear()}-${date.getMonth()}`
-      const monthLabel = date.toLocaleDateString('pt-BR', { month: 'short' })
       monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + r.pts_usados
     })
 

@@ -23,7 +23,6 @@ const projectionData = [
 export default function ProjecoesPage() {
   const [currentPts] = useState(8500)
   const [dailyAvg] = useState(150)
-  const [monthlyGoal] = useState(12000)
 
   const daysTo12k = Math.ceil((12000 - currentPts) / dailyAvg)
   const daysTo50Brl = Math.ceil((5250 - (currentPts % 5250)) / dailyAvg) // Assuming 105 pts/R$

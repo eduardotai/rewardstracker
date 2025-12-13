@@ -1,10 +1,15 @@
 import { supabase } from '@/lib/supabase'
 
+interface UserStats {
+    totalSaldo: number
+    streak: number
+    mediaDiaria: number
+}
+
 const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 30000, retries: number = 2): Promise<T> => {
     for (let i = 0; i <= retries; i++) {
         let timeoutId: NodeJS.Timeout
         try {
-            const start = Date.now()
             const promise = promiseFactory()
             const timeoutPromise = new Promise<T>((_, reject) => {
                 timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms)
@@ -58,7 +63,7 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 const dataCache: {
     dailyRecords: { [userId: string]: { data: DailyRecord[], timestamp: number } }
     resgates: { [userId: string]: { data: Resgate[], timestamp: number } }
-    stats: { [userId: string]: { data: any, timestamp: number } }
+    stats: { [userId: string]: { data: UserStats, timestamp: number } }
     leaderboard: { data: LeaderboardUser[], timestamp: number } | null
 } = {
     dailyRecords: {},
@@ -116,8 +121,6 @@ export async function fetchDailyRecords(userId: string, limit?: number) {
 export async function fetchMonthlyStatus(userId: string, month: number, year: number) {
     const startOfMonth = new Date(year, month, 1)
     const endOfMonth = new Date(year, month + 1, 0)
-
-    const cacheKey = `${userId}_${year}_${month}`
 
     // Check local cache if needed, but for now strict fetch to ensure sync
     const { data: records, error } = await withTimeout(() => supabase

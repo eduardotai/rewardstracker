@@ -88,13 +88,34 @@ const defaultGuestData: GuestData = {
     }
 }
 
+const getInitialGuestMode = (): boolean => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(GUEST_STORAGE_KEY) === 'true'
+}
+
+const getInitialGuestData = (): GuestData | null => {
+    if (typeof window === 'undefined') return null
+    const isGuestMode = localStorage.getItem(GUEST_STORAGE_KEY) === 'true'
+    if (isGuestMode) {
+        const savedData = localStorage.getItem(GUEST_DATA_KEY)
+        return savedData ? JSON.parse(savedData) : defaultGuestData
+    }
+    return null
+}
+
+const getInitialLoadingState = (): boolean => {
+    if (typeof window === 'undefined') return true
+    // Don't show loading if we're in guest mode
+    return localStorage.getItem(GUEST_STORAGE_KEY) !== 'true'
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [session, setSession] = useState<Session | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [isGuest, setIsGuest] = useState(false)
-    const [guestData, setGuestData] = useState<GuestData | null>(null)
+    const [loading, setLoading] = useState(getInitialLoadingState)
+    const [isGuest, setIsGuest] = useState(getInitialGuestMode)
+    const [guestData, setGuestData] = useState<GuestData | null>(getInitialGuestData)
 
     const fetchProfile = async (userId: string, userEmail?: string) => {
         const { data, error } = await supabase
@@ -141,18 +162,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const loadGuestMode = () => {
-        if (typeof window === 'undefined') return false
-
-        const isGuestMode = localStorage.getItem(GUEST_STORAGE_KEY) === 'true'
-        if (isGuestMode) {
-            const savedData = localStorage.getItem(GUEST_DATA_KEY)
-            setGuestData(savedData ? JSON.parse(savedData) : defaultGuestData)
-            setIsGuest(true)
-            return true
-        }
-        return false
-    }
 
     const enterAsGuest = () => {
         localStorage.setItem(GUEST_STORAGE_KEY, 'true')
@@ -189,13 +198,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setLoading(false)
             }
         }, 5000)
-
-        // Check for guest mode first
-        if (loadGuestMode()) {
-            setLoading(false)
-            clearTimeout(timeout)
-            return
-        }
 
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -250,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearTimeout(timeout)
             subscription.unsubscribe()
         }
-    }, [])
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const signOut = async () => {
         if (isGuest) {

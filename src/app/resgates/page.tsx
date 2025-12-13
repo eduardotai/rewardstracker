@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Plus, Calculator, Home, Activity, BarChart3, PiggyBank, User, Gift, Menu, X as CloseIcon, CreditCard, Trash2 } from 'lucide-react'
 import ResgateModal from '@/components/ResgateModal'
 import { useAuth } from '@/contexts/AuthContext'
-import { fetchResgates, fetchUserStats, Resgate } from '@/hooks/useData'
+import { fetchResgates, fetchUserStats } from '@/hooks/useData'
 import toast from 'react-hot-toast'
 
 const navItems = [
@@ -157,10 +157,7 @@ export default function ResgatesPage() {
       custo_efetivo: data.custo_efetivo,
     }
 
-    addResgate({
-      ...newResgate,
-      id: tempId
-    } as any)
+    addResgate(newResgate)
     setIsModalOpen(false)
     toast.success('Resgate adicionado!')
 

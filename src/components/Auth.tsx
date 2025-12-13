@@ -25,11 +25,7 @@ const defaultGuestData = {
 export default function AuthComponent() {
   const router = useRouter()
   const { user } = useAuth()
-  const [redirectTo, setRedirectTo] = useState('')
-
-  useEffect(() => {
-    setRedirectTo(`${window.location.origin}/auth/callback`)
-  }, [])
+  const [redirectTo] = useState(`${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`)
 
   useEffect(() => {
     if (user) {

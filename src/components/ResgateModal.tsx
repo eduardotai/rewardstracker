@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { X, Gift, CreditCard, Calculator } from 'lucide-react'
@@ -34,12 +34,12 @@ const inventory = [
 export default function ResgateModal({ isOpen, onClose, onSave, mode, currentPoints = 0, dailyAverage = 0 }: ResgateModalProps) {
   const [selectedItem, setSelectedItem] = useState('')
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ResgateForm>({
+  const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<ResgateForm>({
     resolver: zodResolver(resgateSchema),
   })
 
-  const watchedPts = watch('pts_usados') || 0
-  const watchedBrl = watch('valor_brl') || 0
+  const watchedPts = useWatch({ control, name: 'pts_usados' }) || 0
+  const watchedBrl = useWatch({ control, name: 'valor_brl' }) || 0
   const custoEfetivo = watchedBrl > 0 ? Math.round(watchedPts / watchedBrl) : 0
 
   const onSubmit = (data: ResgateForm) => {
