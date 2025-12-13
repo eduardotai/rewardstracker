@@ -188,9 +188,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updateGuestData = (newData: Partial<GuestData>) => {
         if (!guestData) return
 
-        const updated = { ...guestData, ...newData }
-        setGuestData(updated)
+        // Read current data from localStorage to ensure we have the latest
+        let currentData = guestData
+        try {
+            const storedData = localStorage.getItem(GUEST_DATA_KEY)
+            if (storedData) {
+                currentData = JSON.parse(storedData)
+            }
+        } catch {
+            // Use state data if localStorage read fails
+        }
+
+        // Merge with deep copy to prevent reference issues
+        const updated: GuestData = {
+            registros: newData.registros ?? (currentData.registros ? currentData.registros.map(r => ({ ...r })) : []),
+            atividades: newData.atividades ?? (currentData.atividades ? currentData.atividades.map(a => ({ ...a })) : []),
+            resgates: newData.resgates ?? (currentData.resgates ? currentData.resgates.map(r => ({ ...r })) : []),
+            profile: newData.profile ?? { ...currentData.profile }
+        }
+
+        // Save to localStorage first to ensure persistence
         localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(updated))
+        // Then update state
+        setGuestData(updated)
     }
 
     const updateGuestProfile = (profileData: Partial<GuestData['profile']>) => {
@@ -198,16 +218,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return
         }
 
-        // Create updated data with deep copy to prevent reference issues
-        const updated = {
-            registros: [...(guestData.registros || [])],
-            atividades: [...(guestData.atividades || [])],
-            resgates: [...(guestData.resgates || [])],
-            profile: { ...guestData.profile, ...profileData }
+        // Read current data from localStorage to ensure we have the latest
+        let currentData = guestData
+        try {
+            const storedData = localStorage.getItem(GUEST_DATA_KEY)
+            if (storedData) {
+                currentData = JSON.parse(storedData)
+            }
+        } catch {
+            // Use state data if localStorage read fails
         }
 
-        setGuestData(updated)
+        // Create updated data with deep copy to prevent reference issues
+        const updated: GuestData = {
+            registros: currentData.registros ? currentData.registros.map(r => ({ ...r })) : [],
+            atividades: currentData.atividades ? currentData.atividades.map(a => ({ ...a })) : [],
+            resgates: currentData.resgates ? currentData.resgates.map(r => ({ ...r })) : [],
+            profile: { ...currentData.profile, ...profileData }
+        }
+
+        // Save to localStorage first to ensure persistence
         localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(updated))
+        // Then update state
+        setGuestData(updated)
     }
 
     useEffect(() => {
