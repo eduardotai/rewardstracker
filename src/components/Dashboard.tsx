@@ -158,6 +158,61 @@ export default function Dashboard() {
     setDataLoading(false)
   }, [])
 
+  // Function to load data (extracted for reuse)
+  const loadData = useCallback(async () => {
+    if (typeof window === 'undefined') return
+
+    setDataLoading(true)
+
+    // Guest mode: load from localStorage
+    if (isGuest) {
+      loadGuestData()
+      return
+    }
+
+    // Not logged in and not guest
+    if (!user) {
+      setDataLoading(false)
+      return
+    }
+
+    // Check if Supabase is properly configured before making API calls
+    if (!isSupabaseConfigured()) {
+      setDataLoading(false)
+      return
+    }
+
+    try {
+      // Fetch all data in parallel
+      const [weeklyRes, recentRes, userStats] = await Promise.all([
+        fetchWeeklyRecords(user.id),
+        fetchDailyRecords(user.id, 20),
+        fetchUserStats(user.id)
+      ])
+
+      // Process Weekly (Chart)
+      if (weeklyRes.data) {
+        const chartData = weeklyRes.data.map(r => ({
+          day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
+          pts: r.total_pts
+        }))
+        setWeeklyData(chartData)
+      }
+
+      // Process Recent (Table - Slice 10)
+      if (recentRes.data) {
+        setRecentRecords(recentRes.data.slice(0, 10))
+      }
+
+      // Process Stats
+      setStats(userStats)
+    } catch {
+      toast.error('Erro ao carregar dados do dashboard.')
+    } finally {
+      setDataLoading(false)
+    }
+  }, [user, isGuest, loadGuestData])
+
   // Fetch data when user authentication state changes
   useEffect(() => {
     // Prevent SSR issues - only run data loading on client side
@@ -176,61 +231,23 @@ export default function Dashboard() {
     // Update tracked auth state
     lastAuthStateRef.current = { ...currentAuthState, hasLoadedData: true }
 
-    async function loadData() {
-      setDataLoading(true)
+    loadData()
+  }, [user?.id, isGuest, loadData])
 
-      // Guest mode: load from localStorage
-      if (isGuest) {
-        loadGuestData()
-        return
-      }
+  // Reload data when window gains focus (user returns from another page)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
 
-      // Not logged in and not guest
-      if (!user) {
-        setDataLoading(false)
-        return
-      }
-
-      // Check if Supabase is properly configured before making API calls
-      if (!isSupabaseConfigured()) {
-        setDataLoading(false)
-        return
-      }
-
-      try {
-        // Fetch all data in parallel
-        // Note: We fetch ALL daily records (no limit) to warm the cache for other pages/tabs
-        const [weeklyRes, recentRes, userStats] = await Promise.all([
-          fetchWeeklyRecords(user.id),
-          fetchDailyRecords(user.id, 20), // Limit to 20 to prevent timeout on large datasets
-          fetchUserStats(user.id)
-        ])
-
-        // Process Weekly (Chart)
-        if (weeklyRes.data) {
-          const chartData = weeklyRes.data.map(r => ({
-            day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
-            pts: r.total_pts
-          }))
-          setWeeklyData(chartData)
-        }
-
-        // Process Recent (Table - Slice 10)
-        if (recentRes.data) {
-          setRecentRecords(recentRes.data.slice(0, 10))
-        }
-
-        // Process Stats
-        setStats(userStats)
-      } catch {
-        toast.error('Erro ao carregar dados do dashboard.')
-      } finally {
-        setDataLoading(false)
+    const handleFocus = () => {
+      // Only reload if we have a user/guest and already loaded data once
+      if (lastAuthStateRef.current.hasLoadedData && (user || isGuest)) {
+        loadData()
       }
     }
 
-    loadData()
-  }, [user?.id, isGuest, user, loadGuestData])
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [user, isGuest, loadData])
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
