@@ -11,7 +11,7 @@ import { fetchWeeklyRecords, fetchUserStats, fetchDailyRecords, DailyRecord } fr
 import { isSupabaseConfigured } from '@/lib/supabase'
 import Badges from './Badges'
 import Leaderboard from './Leaderboard'
-import { REWARDS_LIMITS } from '@/lib/rewards-constants'
+import { REWARDS_LIMITS, getLocalDateString } from '@/lib/rewards-constants'
 
 const GUEST_DATA_KEY = 'rewards_tracker_guest_data'
 
@@ -54,7 +54,7 @@ export default function Dashboard() {
   const progress = Math.min(Math.round((stats.totalSaldo / metaMensal) * 100), 100)
 
   // Calculate Daily Progress based on official limits
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   const todaysRecord = recentRecords.find(r => r.data.startsWith(today))
 
   // Use profile level or default to 2

@@ -7,7 +7,7 @@ import {
   Check, Save, Monitor, Brain, Gamepad2, Gift, Menu, X as CloseIcon, Calendar, LogOut
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { ACTIVITIES_LIST, REWARDS_LIMITS } from '@/lib/rewards-constants'
+import { ACTIVITIES_LIST, REWARDS_LIMITS, getLocalDateString } from '@/lib/rewards-constants'
 import { insertDailyRecord } from '@/hooks/useData'
 import toast from 'react-hot-toast'
 
@@ -27,7 +27,7 @@ export default function AtividadesPage() {
   const [loading, setLoading] = useState(false)
 
   // Form State
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(getLocalDateString())
   const [activityType, setActivityType] = useState('')
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({})
   const [notes, setNotes] = useState('')

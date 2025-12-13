@@ -7,6 +7,7 @@ import ResgateModal from '@/components/ResgateModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchResgates, fetchUserStats } from '@/hooks/useData'
 import { isSupabaseConfigured } from '@/lib/supabase'
+import { getLocalDateString } from '@/lib/rewards-constants'
 import toast from 'react-hot-toast'
 
 const navItems = [
@@ -151,7 +152,7 @@ export default function ResgatesPage() {
   }
 
   const handleSaveResgate = async (data: { item: string; pts_usados: number; valor_brl: number; custo_efetivo: number }) => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateString()
 
     // Validate data before proceeding
     if (!data.item || data.item.trim() === '') {

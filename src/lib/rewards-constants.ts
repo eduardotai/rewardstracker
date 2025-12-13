@@ -1,5 +1,14 @@
 // Official Microsoft Rewards Constants (Brazil) based on 2024/2025 data
 
+// Helper function to get local date in YYYY-MM-DD format
+// This avoids timezone issues with toISOString() which uses UTC
+export function getLocalDateString(date: Date = new Date()): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
 export const REWARDS_DEFAULTS = {
     SEARCH_POINTS_PER_SEARCH: 3,
 }

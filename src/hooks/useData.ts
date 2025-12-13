@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { getLocalDateString } from '@/lib/rewards-constants'
 
 interface UserStats {
     totalSaldo: number
@@ -129,8 +130,8 @@ export async function fetchMonthlyStatus(userId: string, month: number, year: nu
         .from('registros_diarios')
         .select('data, meta_batida, total_pts')
         .eq('user_id', userId)
-        .gte('data', startOfMonth.toISOString().split('T')[0])
-        .lte('data', endOfMonth.toISOString().split('T')[0])
+        .gte('data', getLocalDateString(startOfMonth))
+        .lte('data', getLocalDateString(endOfMonth))
     )
 
     if (error) return { data: [], error }
@@ -145,7 +146,7 @@ export async function fetchWeeklyRecords(userId: string) {
     if (cachedFull && (Date.now() - cachedFull.timestamp < CACHE_DURATION)) {
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        const cutoff = sevenDaysAgo.toISOString().split('T')[0]
+        const cutoff = getLocalDateString(sevenDaysAgo)
 
         const filtered = cachedFull.data
             .filter(r => r.data >= cutoff)
@@ -161,7 +162,7 @@ export async function fetchWeeklyRecords(userId: string) {
         .from('registros_diarios')
         .select('*')
         .eq('user_id', userId)
-        .gte('data', sevenDaysAgo.toISOString().split('T')[0])
+        .gte('data', getLocalDateString(sevenDaysAgo))
         .order('data', { ascending: true })
     )
 
@@ -402,7 +403,7 @@ export async function fetchLeaderboardData(currentUserId?: string) {
             withTimeout(() => supabase
                 .from('registros_diarios')
                 .select('user_id, total_pts')
-                .gte('data', thirtyDaysAgo.toISOString().split('T')[0]),
+                .gte('data', getLocalDateString(thirtyDaysAgo)),
                 60000 // Increase timeout to 60s for heavy leaderboard fetch
             )
         ])
