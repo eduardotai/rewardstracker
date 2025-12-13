@@ -72,74 +72,78 @@ export default function Dashboard() {
   const loadGuestData = useCallback(() => {
     const savedData = localStorage.getItem(GUEST_DATA_KEY)
     if (savedData) {
-      const guestData = JSON.parse(savedData)
-      const records: GuestRecord[] = guestData.registros || []
+      try {
+        const guestData = JSON.parse(savedData)
+        const records: GuestRecord[] = guestData.registros || []
 
-      // Set recent records
-      setRecentRecords(records.slice(0, 10) as DailyRecord[])
+        // Set recent records
+        setRecentRecords(records.slice(0, 10) as DailyRecord[])
 
-      // Calculate weekly data
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      const weeklyRecords = records.filter(r => new Date(r.data) >= sevenDaysAgo)
-      const chartData = weeklyRecords.map(r => ({
-        day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
-        pts: r.total_pts
-      }))
-      setWeeklyData(chartData)
+        // Calculate weekly data
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        const weeklyRecords = records.filter(r => new Date(r.data) >= sevenDaysAgo)
+        const chartData = weeklyRecords.map(r => ({
+          day: new Date(r.data).toLocaleDateString('pt-BR', { weekday: 'short' }),
+          pts: r.total_pts
+        }))
+        setWeeklyData(chartData)
 
-      // Calculate stats
-      const totalSaldo = records.reduce((sum, r) => sum + (r.total_pts || 0), 0)
-      const mediaDiaria = records.length > 0 ? Math.round(totalSaldo / records.length) : 0
+        // Calculate stats
+        const totalSaldo = records.reduce((sum, r) => sum + (r.total_pts || 0), 0)
+        const mediaDiaria = records.length > 0 ? Math.round(totalSaldo / records.length) : 0
 
-      // Calculate streak
-      const sortedRecords = records
-        .filter(r => r.meta_batida)
-        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+        // Calculate streak
+        const sortedRecords = records
+          .filter(r => r.meta_batida)
+          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
 
-      let streak = 0
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+        let streak = 0
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
 
-      let lastDate: Date | null = null
+        let lastDate: Date | null = null
 
-      for (const record of sortedRecords) {
-        const recordDateParts = record.data.split('T')[0].split('-')
-        const recordDate = new Date(
-          parseInt(recordDateParts[0]),
-          parseInt(recordDateParts[1]) - 1,
-          parseInt(recordDateParts[2])
-        )
-        recordDate.setHours(0, 0, 0, 0)
+        for (const record of sortedRecords) {
+          const recordDateParts = record.data.split('T')[0].split('-')
+          const recordDate = new Date(
+            parseInt(recordDateParts[0]),
+            parseInt(recordDateParts[1]) - 1,
+            parseInt(recordDateParts[2])
+          )
+          recordDate.setHours(0, 0, 0, 0)
 
-        if (lastDate === null) {
-          const diffTime = today.getTime() - recordDate.getTime()
-          const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+          if (lastDate === null) {
+            const diffTime = today.getTime() - recordDate.getTime()
+            const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
 
-          if (diffDays <= 1) {
-            streak++
-            lastDate = recordDate
+            if (diffDays <= 1) {
+              streak++
+              lastDate = recordDate
+            } else {
+              break
+            }
           } else {
-            break
-          }
-        } else {
-          const diffTime = lastDate.getTime() - recordDate.getTime()
-          const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
+            const diffTime = lastDate.getTime() - recordDate.getTime()
+            const diffDays = Math.round(diffTime / (1000 * 3600 * 24))
 
-          if (diffDays === 0) {
-            continue // Same day, skip
-          }
+            if (diffDays === 0) {
+              continue // Same day, skip
+            }
 
-          if (diffDays === 1) {
-            streak++
-            lastDate = recordDate
-          } else {
-            break
+            if (diffDays === 1) {
+              streak++
+              lastDate = recordDate
+            } else {
+              break
+            }
           }
         }
-      }
 
-      setStats({ totalSaldo, streak, mediaDiaria })
+        setStats({ totalSaldo, streak, mediaDiaria })
+      } catch (error) {
+        console.error('Dashboard: Error loading guest data:', error)
+      }
     }
     setDataLoading(false)
   }, [])
@@ -147,6 +151,15 @@ export default function Dashboard() {
   // Fetch data when user is available
   useEffect(() => {
     async function loadData() {
+      // Prevent unnecessary reloads - only reload if we don't have data yet
+      if (isGuest && recentRecords.length > 0) {
+        return
+      }
+
+      if (!isGuest && user && recentRecords.length > 0) {
+        return
+      }
+
       setDataLoading(true)
 
       // Guest mode: load from localStorage
