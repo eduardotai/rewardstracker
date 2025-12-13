@@ -340,9 +340,19 @@ export async function insertDailyRecord(userId: string, record: Omit<DailyRecord
 
 // Insert resgate
 export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' | 'created_at' | 'user_id'>) {
+    // Ensure we don't send any id field to let Supabase generate it
+    const resgateData = {
+        data: resgate.data,
+        item: resgate.item,
+        pts_usados: resgate.pts_usados,
+        valor_brl: resgate.valor_brl,
+        custo_efetivo: resgate.custo_efetivo,
+        user_id: userId
+    }
+
     const { data, error } = await withTimeout(() => supabase
         .from('resgates')
-        .insert([{ ...resgate, user_id: userId }])
+        .insert([resgateData])
         .select()
         .single()
     )
