@@ -77,8 +77,7 @@ export default function ResgatesPage() {
         } else {
           setLoading(false)
         }
-      } catch (error) {
-        console.error('Error loading resgates:', error)
+      } catch {
         toast.error('Erro ao carregar dados.')
         setLoading(false)
       }
@@ -169,8 +168,6 @@ export default function ResgatesPage() {
       custo_efetivo: Math.round(data.custo_efetivo * 100) / 100,
     }
 
-    console.log('ResgatesPage: Creating resgate:', newResgate)
-
     addResgate(newResgate)
     setIsModalOpen(false)
     toast.success('Resgate adicionado!')
@@ -187,13 +184,11 @@ export default function ResgatesPage() {
           valor_brl: newResgate.valor_brl,
           custo_efetivo: newResgate.custo_efetivo,
         }
-        console.log('ResgatesPage: Sending to database:', resgateForDB)
         const { error } = await insertResgate(user.id, resgateForDB)
 
         if (error) throw error
 
-      } catch (error) {
-        console.error('Error saving resgate:', error)
+      } catch {
         toast.error('Erro ao salvar no servidor. Tente novamente.')
         // Rollback optimistic update
         deleteResgate(tempId)

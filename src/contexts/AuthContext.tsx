@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session } from '@supabase/supabase-js'
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
 const GUEST_STORAGE_KEY = 'rewards_tracker_guest_mode'
@@ -101,8 +101,7 @@ const getInitialGuestData = (): GuestData | null => {
         if (savedData) {
             try {
                 return JSON.parse(savedData)
-            } catch (e) {
-                console.error('AuthContext: Error parsing guest data from storage:', e)
+            } catch {
                 return defaultGuestData
             }
         }
@@ -127,8 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const fetchProfile = async (userId: string, userEmail?: string) => {
         try {
-            console.log('AuthContext: Fetching profile for user:', userId)
-
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -136,17 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .maybeSingle()
 
             if (error) {
-                console.error('AuthContext: Error fetching profile:', error)
                 return null
             }
 
             if (data) {
-                console.log('AuthContext: Profile found')
                 setProfile(data)
                 return data
             } else if (userEmail) {
-                console.log('AuthContext: Profile not found, creating new one')
-
                 // Profile doesn't exist, create one for new users
                 const newProfile = {
                     id: userId,
@@ -164,25 +157,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     .single()
 
                 if (!createError && createdProfile) {
-                    console.log('AuthContext: Profile created successfully')
                     setProfile(createdProfile as UserProfile)
                     return createdProfile
                 } else {
-                    console.error('AuthContext: Error creating profile:', createError)
                     return null
                 }
             }
 
             return null
-        } catch (error) {
-            console.error('AuthContext: Unexpected error in fetchProfile:', error)
+        } catch {
             return null
         }
     }
 
     const refreshProfile = async () => {
         if (user && !loading) {
-            console.log('AuthContext: Refreshing profile for user:', user.id)
             await fetchProfile(user.id, user.email)
         }
     }
@@ -206,7 +195,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updateGuestProfile = (profileData: Partial<GuestData['profile']>) => {
         if (!guestData) {
-            console.warn('AuthContext: updateGuestProfile called but guestData is null')
             return
         }
 
@@ -229,7 +217,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Safety timeout to prevent infinite loading - increased to 15 seconds
         const timeout = setTimeout(() => {
             if (isMounted && loading && !profileOperationInProgress) {
-                console.log('AuthContext: Loading timed out after 15s, forcing false')
                 setLoading(false)
             }
         }, 15000)
@@ -253,32 +240,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Get initial session
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
-            if (!isMounted) return
+        const initSession = async () => {
+            try {
+                const { data } = await supabase.auth.getSession()
+                const initialSession = data?.session as Session | null
+                if (!isMounted) return
 
-            setSession(session)
-            setUser(session?.user ?? null)
+                setSession(initialSession)
+                setUser(initialSession?.user ?? null)
 
-            if (session?.user) {
-                await handleProfileOperation(session.user.id, session.user.email)
-            } else {
-                setLoading(false)
+                if (initialSession?.user) {
+                    await handleProfileOperation(initialSession.user.id, initialSession.user.email)
+                } else {
+                    setLoading(false)
+                }
+            } catch {
+                if (isMounted) {
+                    setLoading(false)
+                }
+            } finally {
+                clearTimeout(timeout)
             }
+        }
 
-            clearTimeout(timeout)
-        }).catch(err => {
-            console.error('AuthContext: GetSession error', err)
-            if (isMounted) {
-                setLoading(false)
-            }
-        })
+        initSession()
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
+            async (_event: AuthChangeEvent, session: Session | null) => {
                 if (!isMounted) return
-
-                console.log('AuthContext: Auth State Change:', event, session?.user?.email)
 
                 // Always update session for token refresh
                 setSession(session)
@@ -287,7 +277,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 // Only update user and fetch profile if user actually changed
                 if (newUserId !== lastUserId.current) {
-                    console.log('AuthContext: User changed, updating state...', newUserId)
                     lastUserId.current = newUserId
                     setUser(session?.user ?? null)
 
@@ -301,7 +290,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         setLoading(false)
                     }
                 } else {
-                    console.log('AuthContext: User unchanged, skipping update logic.')
                     setLoading(false)
                 }
             }

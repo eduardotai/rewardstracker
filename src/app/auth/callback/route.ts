@@ -9,10 +9,17 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/'
 
   if (code) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    }
+
     const cookieStore = await cookies()
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      supabaseUrl,
+      supabaseAnonKey,
       {
         cookies: {
           get(name: string) {
@@ -32,19 +39,14 @@ export async function GET(request: Request) {
       const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
       if (isLocalEnv) {
-        console.log('Auth Callback: Redirecting to origin + next', `${origin}${next}`)
         return NextResponse.redirect(`${origin}${next}`)
       } else if (forwardedHost) {
-        console.log('Auth Callback: Redirecting to forwardedHost + next', `https://${forwardedHost}${next}`)
         return NextResponse.redirect(`https://${forwardedHost}${next}`)
       } else {
-        console.log('Auth Callback: Redirecting to origin + next (default)', `${origin}${next}`)
         return NextResponse.redirect(`${origin}${next}`)
       }
-    } else {
-      console.error('Auth Callback: Error exchanging code for session', error)
     }
-  } else {
-    console.log('Auth Callback: No code found in searchParams')
   }
+
+  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }
