@@ -197,14 +197,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const updateGuestProfile = (profileData: Partial<GuestData['profile']>) => {
-        if (!guestData) return
+        if (!guestData) {
+            console.warn('AuthContext: updateGuestProfile called but guestData is null')
+            return
+        }
+
+        console.log('AuthContext: updateGuestProfile called with:', profileData)
+        console.log('AuthContext: current guestData before update:', {
+            registrosCount: guestData.registros?.length || 0,
+            atividadesCount: guestData.atividades?.length || 0,
+            resgatesCount: guestData.resgates?.length || 0,
+            currentTier: guestData.profile?.tier
+        })
 
         const updated = {
             ...guestData,
             profile: { ...guestData.profile, ...profileData }
         }
+
+        console.log('AuthContext: updated guestData:', {
+            registrosCount: updated.registros?.length || 0,
+            atividadesCount: updated.atividades?.length || 0,
+            resgatesCount: updated.resgates?.length || 0,
+            newTier: updated.profile?.tier
+        })
+
         setGuestData(updated)
         localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(updated))
+
+        // Verify storage
+        const stored = localStorage.getItem(GUEST_DATA_KEY)
+        if (stored) {
+            const parsed = JSON.parse(stored)
+            console.log('AuthContext: verified storage:', {
+                registrosCount: parsed.registros?.length || 0,
+                tier: parsed.profile?.tier
+            })
+        }
     }
 
     useEffect(() => {

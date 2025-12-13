@@ -46,10 +46,28 @@ export default function PerfilPage() {
 
   // Auto-save profile changes for guest
   const handleTierChange = async (newTier: string) => {
+    console.log('Perfil: Changing tier from', tier, 'to', newTier)
+    console.log('Perfil: isGuest:', isGuest, 'guestData exists:', !!guestData)
+
     setTier(newTier)
 
     if (isGuest) {
+      console.log('Perfil: Updating guest profile, current guestData:', guestData)
       updateGuestProfile({ tier: newTier })
+
+      // Verify the data was saved correctly
+      setTimeout(() => {
+        const savedData = localStorage.getItem('rewards_tracker_guest_data')
+        if (savedData) {
+          const parsed = JSON.parse(savedData)
+          console.log('Perfil: Data after tier change:', {
+            registrosCount: parsed.registros?.length || 0,
+            atividadesCount: parsed.atividades?.length || 0,
+            resgatesCount: parsed.resgates?.length || 0,
+            tier: parsed.profile?.tier
+          })
+        }
+      }, 100)
     } else if (user) {
       setSaving(true)
       const { error } = await supabase
