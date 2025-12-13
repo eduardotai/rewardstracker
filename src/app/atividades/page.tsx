@@ -122,8 +122,7 @@ export default function AtividadesPage() {
       // For now, let's keep it on page but clear checks? No, user might want to see what they just did.
       // Maybe play a sound or meaningful success animation?
 
-    } catch (error) {
-      console.error(error)
+    } catch {
       toast.error('Erro ao salvar atividade.')
     } finally {
       setLoading(false)

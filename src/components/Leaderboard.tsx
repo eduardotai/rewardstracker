@@ -32,8 +32,8 @@ export default function Leaderboard() {
         if (realData.length > 0) {
           setData(realData)
         }
-      } catch (error) {
-        console.error('Failed to load leaderboard', error)
+      } catch {
+        // Keep mock data on error
       } finally {
         setLoading(false)
       }

@@ -7,34 +7,31 @@ interface UserStats {
 }
 
 const withTimeout = async <T>(promiseFactory: () => PromiseLike<T>, ms: number = 10000, retries: number = 1): Promise<T> => {
+    let lastError: Error | undefined
     for (let i = 0; i <= retries; i++) {
-        let timeoutId: NodeJS.Timeout
+        let timeoutId: ReturnType<typeof setTimeout>
         try {
-            const start = Date.now()
             const promise = promiseFactory()
             const timeoutPromise = new Promise<T>((_, reject) => {
                 timeoutId = setTimeout(() => reject(new Error(`Request timed out after ${ms}ms`)), ms)
             })
             const result = await Promise.race([promise, timeoutPromise])
             clearTimeout(timeoutId!)
-            console.log(`useData: Request completed successfully in ${Date.now() - start}ms`)
             return result
-        } catch (error) {
+        } catch (err) {
             clearTimeout(timeoutId!)
-            console.log(`useData: Request attempt ${i + 1} failed:`, error)
+            lastError = err instanceof Error ? err : new Error(String(err))
             const isLastAttempt = i === retries
             if (isLastAttempt) {
-                console.error('useData: All retry attempts failed:', error)
-                throw error
+                throw lastError
             }
 
             // Wait before retrying (exponential backoff: 1s, 2s)
             const delay = 1000 * Math.pow(2, i)
-            console.warn(`Request attempt ${i + 1} failed, retrying in ${delay}ms...`, error)
             await new Promise(resolve => setTimeout(resolve, delay))
         }
     }
-    throw new Error('All retries failed')
+    throw lastError ?? new Error('All retries failed')
 }
 
 export interface DailyRecord {
@@ -343,8 +340,6 @@ export async function insertDailyRecord(userId: string, record: Omit<DailyRecord
 
 // Insert resgate
 export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' | 'created_at' | 'user_id'>) {
-    console.log('useData: Inserting resgate for user:', userId, 'data:', resgate)
-
     const { data, error } = await withTimeout(() => supabase
         .from('resgates')
         .insert([{ ...resgate, user_id: userId }])
@@ -352,10 +347,7 @@ export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' 
         .single()
     )
 
-    if (error) {
-        console.error('useData: Error inserting resgate:', error)
-    } else {
-        console.log('useData: Resgate inserted successfully:', data)
+    if (!error) {
         invalidateCache(userId)
     }
 
@@ -400,13 +392,7 @@ export async function fetchLeaderboardData(currentUserId?: string) {
         const { data: profiles, error: profilesError } = profilesResult
         const { data: records, error: recordsError } = recordsResult
 
-        if (profilesError) {
-            console.error('Error fetching profiles for leaderboard:', profilesError)
-            return []
-        }
-
-        if (recordsError) {
-            console.error('Error fetching records for leaderboard:', recordsError)
+        if (profilesError || recordsError) {
             return []
         }
 
@@ -443,8 +429,7 @@ export async function fetchLeaderboardData(currentUserId?: string) {
         }
 
         return sortedLeaderboard
-    } catch (error) {
-        console.error('Leaderboard fetch timed out or failed', error)
+    } catch {
         return []
     }
 }

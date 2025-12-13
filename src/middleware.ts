@@ -28,6 +28,17 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next()
     }
 
+    // Check if Supabase is configured
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        // Supabase not configured, redirect to auth page
+        const redirectUrl = new URL('/auth', request.url)
+        redirectUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(redirectUrl)
+    }
+
     // Create a response to modify
     let response = NextResponse.next({
         request: {
@@ -36,8 +47,8 @@ export async function middleware(request: NextRequest) {
     })
 
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        supabaseUrl,
+        supabaseAnonKey,
         {
             cookies: {
                 getAll() {
@@ -59,11 +70,8 @@ export async function middleware(request: NextRequest) {
     // Check if user is authenticated
     const { data: { session } } = await supabase.auth.getSession()
 
-    console.log('Middleware: Path:', pathname, 'Session:', session?.user?.email ? 'Authenticated' : 'No Session')
-
     if (!session) {
         // Redirect to login page
-        console.log('Middleware: Unauthenticated access, redirecting to /auth')
         const redirectUrl = new URL('/auth', request.url)
         redirectUrl.searchParams.set('redirect', pathname)
         return NextResponse.redirect(redirectUrl)

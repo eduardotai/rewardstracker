@@ -34,7 +34,6 @@ export default function AuthComponent() {
   }, [user, router])
 
   const handleGuestMode = () => {
-    console.log('Auth Component: Entering as guest')
     localStorage.setItem(GUEST_STORAGE_KEY, 'true')
     localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(defaultGuestData))
     document.cookie = 'rewards_guest_mode=true; path=/; max-age=31536000'

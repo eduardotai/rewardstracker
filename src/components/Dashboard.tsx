@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { Trophy, TrendingUp, Calendar, Target, Plus, Gift, BarChart3, Menu, X as CloseIcon, Home, Activity, PiggyBank, User, LogOut } from 'lucide-react'
@@ -46,8 +46,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ totalSaldo: 0, streak: 0, mediaDiaria: 0 })
   const [dataLoading, setDataLoading] = useState(true)
 
-  // Track authentication state to prevent unnecessary reloads
-  const [lastAuthState, setLastAuthState] = useState({ userId: user?.id, isGuest })
+  // Track authentication state to prevent unnecessary reloads using ref
+  const lastAuthStateRef = useRef({ userId: user?.id, isGuest, hasLoadedData: false })
 
   const metaMensal = profile?.meta_mensal || 12000
   const progress = Math.min(Math.round((stats.totalSaldo / metaMensal) * 100), 100)
@@ -147,8 +147,8 @@ export default function Dashboard() {
         }
 
         setStats({ totalSaldo, streak, mediaDiaria })
-      } catch (error) {
-        console.error('Dashboard: Error loading guest data:', error)
+      } catch {
+        // Error loading guest data - continue with empty state
       }
     }
     setDataLoading(false)
@@ -161,16 +161,16 @@ export default function Dashboard() {
 
     // Only reload if authentication state actually changed
     const currentAuthState = { userId: user?.id, isGuest }
-    const authChanged = lastAuthState.userId !== currentAuthState.userId ||
-                       lastAuthState.isGuest !== currentAuthState.isGuest
+    const authChanged = lastAuthStateRef.current.userId !== currentAuthState.userId ||
+                       lastAuthStateRef.current.isGuest !== currentAuthState.isGuest
 
     // If auth state didn't change and we already have data, don't reload
-    if (!authChanged && recentRecords.length > 0) {
+    if (!authChanged && lastAuthStateRef.current.hasLoadedData) {
       return
     }
 
     // Update tracked auth state
-    setLastAuthState(currentAuthState)
+    lastAuthStateRef.current = { ...currentAuthState, hasLoadedData: true }
 
     async function loadData() {
       setDataLoading(true)
@@ -212,8 +212,7 @@ export default function Dashboard() {
 
         // Process Stats
         setStats(userStats)
-      } catch (error) {
-        console.error('Error loading data:', error)
+      } catch {
         toast.error('Erro ao carregar dados do dashboard.')
       } finally {
         setDataLoading(false)
@@ -221,7 +220,7 @@ export default function Dashboard() {
     }
 
     loadData()
-  }, [user?.id, isGuest]) // Only depend on actual auth state changes
+  }, [user?.id, isGuest, user, loadGuestData])
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)

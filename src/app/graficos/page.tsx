@@ -54,8 +54,7 @@ export default function GraficosPage() {
         } else {
           setLoading(false)
         }
-      } catch (error) {
-        console.error('Error loading charts data:', error)
+      } catch {
         setLoading(false)
       }
     }
