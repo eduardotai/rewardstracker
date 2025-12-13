@@ -21,8 +21,8 @@ interface DisplayResgate {
   data: string
   item: string
   pts_usados: number
-  valor_brl: number
-  custo_efetivo: number
+  valor_brl: number | null
+  custo_efetivo: number | null
 }
 
 export default function ResgatesPage() {
@@ -124,8 +124,9 @@ export default function ResgatesPage() {
   }, [resgates, isGuest, updateGuestData])
 
   const totalPtsUsados = resgates.reduce((sum, r) => sum + r.pts_usados, 0)
-  const totalValor = resgates.reduce((sum, r) => sum + r.valor_brl, 0)
-  const mediaCusto = resgates.length > 0
+  const resgatesComValor = resgates.filter(r => r.valor_brl && r.valor_brl > 0)
+  const totalValor = resgatesComValor.reduce((sum, r) => sum + (r.valor_brl || 0), 0)
+  const mediaCusto = resgatesComValor.length > 0
     ? Math.round(totalPtsUsados / totalValor)
     : 0
 
@@ -146,16 +147,29 @@ export default function ResgatesPage() {
   const handleSaveResgate = async (data: { item: string; pts_usados: number; valor_brl: number; custo_efetivo: number }) => {
     const today = new Date().toISOString().split('T')[0]
 
+    // Validate data before proceeding
+    if (!data.item || data.item.trim() === '') {
+      toast.error('Nome do item é obrigatório')
+      return
+    }
+
+    if (data.pts_usados <= 0) {
+      toast.error('Pontos usados deve ser maior que zero')
+      return
+    }
+
     // Create resgate object
     const tempId = crypto.randomUUID()
     const newResgate = {
       id: tempId,
       data: today,
-      item: data.item,
-      pts_usados: data.pts_usados,
-      valor_brl: data.valor_brl,
-      custo_efetivo: data.custo_efetivo,
+      item: data.item.trim(),
+      pts_usados: Math.round(data.pts_usados),
+      valor_brl: Math.round(data.valor_brl * 100) / 100, // Round to 2 decimal places
+      custo_efetivo: Math.round(data.custo_efetivo * 100) / 100,
     }
+
+    console.log('ResgatesPage: Creating resgate:', newResgate)
 
     addResgate(newResgate)
     setIsModalOpen(false)
@@ -165,7 +179,16 @@ export default function ResgatesPage() {
     if (!isGuest && user) {
       try {
         const { insertResgate } = await import('@/hooks/useData')
-        const { error } = await insertResgate(user.id, newResgate)
+        // Remove id since Supabase will generate it, and format data for database
+        const resgateForDB = {
+          data: newResgate.data,
+          item: newResgate.item,
+          pts_usados: newResgate.pts_usados,
+          valor_brl: newResgate.valor_brl,
+          custo_efetivo: newResgate.custo_efetivo,
+        }
+        console.log('ResgatesPage: Sending to database:', resgateForDB)
+        const { error } = await insertResgate(user.id, resgateForDB)
 
         if (error) throw error
 

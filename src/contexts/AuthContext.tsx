@@ -31,8 +31,8 @@ interface GuestResgate {
     data: string
     item: string
     pts_usados: number
-    valor_brl: number
-    custo_efetivo: number
+    valor_brl: number | null
+    custo_efetivo: number | null
     created_at: string
 }
 

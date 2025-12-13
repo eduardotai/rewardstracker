@@ -53,13 +53,13 @@ export interface DailyRecord {
 }
 
 export interface Resgate {
-    id: number
+    id: string
     created_at: string
     data: string
     item: string
     pts_usados: number
-    valor_brl: number
-    custo_efetivo: number
+    valor_brl: number | null
+    custo_efetivo: number | null
     user_id?: string
 }
 
@@ -343,6 +343,8 @@ export async function insertDailyRecord(userId: string, record: Omit<DailyRecord
 
 // Insert resgate
 export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' | 'created_at' | 'user_id'>) {
+    console.log('useData: Inserting resgate for user:', userId, 'data:', resgate)
+
     const { data, error } = await withTimeout(() => supabase
         .from('resgates')
         .insert([{ ...resgate, user_id: userId }])
@@ -350,7 +352,10 @@ export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' 
         .single()
     )
 
-    if (!error) {
+    if (error) {
+        console.error('useData: Error inserting resgate:', error)
+    } else {
+        console.log('useData: Resgate inserted successfully:', data)
         invalidateCache(userId)
     }
 

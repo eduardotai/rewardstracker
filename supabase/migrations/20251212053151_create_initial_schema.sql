@@ -48,7 +48,8 @@ CREATE TABLE resgates (
   pts_usados INTEGER NOT NULL,
   valor_brl DECIMAL(10,2),
   custo_efetivo DECIMAL(10,2),
-  notas TEXT
+  notas TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Enable Row Level Security
