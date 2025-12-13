@@ -46,6 +46,9 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ totalSaldo: 0, streak: 0, mediaDiaria: 0 })
   const [dataLoading, setDataLoading] = useState(true)
 
+  // Track authentication state to prevent unnecessary reloads
+  const [lastAuthState, setLastAuthState] = useState({ userId: user?.id, isGuest })
+
   const metaMensal = profile?.meta_mensal || 12000
   const progress = Math.min(Math.round((stats.totalSaldo / metaMensal) * 100), 100)
 
@@ -70,6 +73,9 @@ export default function Dashboard() {
 
   // Load guest data from localStorage
   const loadGuestData = useCallback(() => {
+    // Prevent SSR issues - only access localStorage on client side
+    if (typeof window === 'undefined') return
+
     const savedData = localStorage.getItem(GUEST_DATA_KEY)
     if (savedData) {
       try {
@@ -148,18 +154,25 @@ export default function Dashboard() {
     setDataLoading(false)
   }, [])
 
-  // Fetch data when user is available
+  // Fetch data when user authentication state changes
   useEffect(() => {
+    // Prevent SSR issues - only run data loading on client side
+    if (typeof window === 'undefined') return
+
+    // Only reload if authentication state actually changed
+    const currentAuthState = { userId: user?.id, isGuest }
+    const authChanged = lastAuthState.userId !== currentAuthState.userId ||
+                       lastAuthState.isGuest !== currentAuthState.isGuest
+
+    // If auth state didn't change and we already have data, don't reload
+    if (!authChanged && recentRecords.length > 0) {
+      return
+    }
+
+    // Update tracked auth state
+    setLastAuthState(currentAuthState)
+
     async function loadData() {
-      // Prevent unnecessary reloads - only reload if we don't have data yet
-      if (isGuest && recentRecords.length > 0) {
-        return
-      }
-
-      if (!isGuest && user && recentRecords.length > 0) {
-        return
-      }
-
       setDataLoading(true)
 
       // Guest mode: load from localStorage
@@ -208,7 +221,7 @@ export default function Dashboard() {
     }
 
     loadData()
-  }, [user, isGuest, loadGuestData])
+  }, [user?.id, isGuest]) // Only depend on actual auth state changes
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
