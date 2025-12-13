@@ -83,8 +83,11 @@ export default function Dashboard() {
         const guestData = JSON.parse(savedData)
         const records: GuestRecord[] = guestData.registros || []
 
-        // Set recent records
-        setRecentRecords(records.slice(0, 10) as DailyRecord[])
+        // Sort records by date descending (newest first) and set recent records
+        const sortedRecords = [...records].sort((a, b) =>
+          new Date(b.data).getTime() - new Date(a.data).getTime()
+        )
+        setRecentRecords(sortedRecords.slice(0, 10) as DailyRecord[])
 
         // Calculate weekly data
         const sevenDaysAgo = new Date()
@@ -101,7 +104,7 @@ export default function Dashboard() {
         const mediaDiaria = records.length > 0 ? Math.round(totalSaldo / records.length) : 0
 
         // Calculate streak
-        const sortedRecords = records
+        const streakSortedRecords = records
           .filter(r => r.meta_batida)
           .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
 
@@ -111,7 +114,7 @@ export default function Dashboard() {
 
         let lastDate: Date | null = null
 
-        for (const record of sortedRecords) {
+        for (const record of streakSortedRecords) {
           const recordDateParts = record.data.split('T')[0].split('-')
           const recordDate = new Date(
             parseInt(recordDateParts[0]),

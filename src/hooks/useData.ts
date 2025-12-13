@@ -340,6 +340,14 @@ export async function insertDailyRecord(userId: string, record: Omit<DailyRecord
 
 // Insert resgate
 export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' | 'created_at' | 'user_id'>) {
+    // Verify the session is active and user_id matches
+    const { data: sessionData } = await supabase.auth.getSession()
+    const authenticatedUserId = sessionData?.session?.user?.id
+
+    if (!authenticatedUserId || authenticatedUserId !== userId) {
+        return { data: null, error: new Error('Session expired or user mismatch. Please refresh and try again.') }
+    }
+
     // Ensure we don't send any id field to let Supabase generate it
     const resgateData = {
         data: resgate.data,
@@ -347,7 +355,7 @@ export async function insertResgate(userId: string, resgate: Omit<Resgate, 'id' 
         pts_usados: resgate.pts_usados,
         valor_brl: resgate.valor_brl,
         custo_efetivo: resgate.custo_efetivo,
-        user_id: userId
+        user_id: authenticatedUserId // Use the verified authenticated user ID
     }
 
     const { data, error } = await withTimeout(() => supabase
